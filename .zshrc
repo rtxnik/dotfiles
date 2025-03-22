@@ -122,6 +122,7 @@ alias icloud='cd $ICLOUD'
 alias scripts='cd $SCRIPTS'
 alias docs='cd $DOCUMENTS'
 alias down='cd $DOWNLOADS'
+alias ztl='cd $ZETTELKASTEN'
 
 # Git shortcuts
 alias gs='git status'
