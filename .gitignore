@@ -2,4 +2,5 @@ lazy-lock.json
 lazyvim.json
 .DS_Store
 nvim-main.bak/
+nvim.bak
 k9s
