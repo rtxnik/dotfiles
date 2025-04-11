@@ -7,18 +7,18 @@ return {
     },
     config = function()
       require("go").setup({
-        -- Путь к Go
         go = "go",
-        -- Используем format.auto_format вместо устаревшего goimport
         format = {
           enable = true,
           auto_format = true,
           formatter = "gofumpt",
         },
-        -- Отключаем отладку
+        -- Добавьте явную настройку для run
+        run = {
+          enable = true,
+        },
         dap_debug = false,
-        -- Другие настройки форматирования
-        lsp_gofumpt = true, -- true: использовать gofumpt вместо gofmt в gopls
+        lsp_gofumpt = true,
         lsp_inlay_hints = {
           enable = true,
         },

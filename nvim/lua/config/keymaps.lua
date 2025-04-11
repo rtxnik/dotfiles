@@ -55,3 +55,5 @@ vim.keymap.set("n", "<leader>gt", "<cmd>GoTest<CR>", { desc = "Go Test" })
 
 vim.keymap.set("n", "<leader>hy", "i{{< youtube id >}}<Esc>", { desc = "Hugo Youtube" })
 vim.keymap.set("n", "<leader>zp", "ggi---<CR>publish: true<CR>---<CR><CR><Esc>", { desc = "Zettelkasten Publish" })
+
+vim.keymap.set("n", "<leader>gr", "<cmd>GoRun<CR>", { desc = "Go Run" })
