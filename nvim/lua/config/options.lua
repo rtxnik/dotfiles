@@ -42,3 +42,29 @@ opt.scrolloff = 8
 vim.g.lazygit_config = false
 
 vim.g.snacks_animate = false
+
+-- Проверка и настройка PATH для Go
+local function setup_go_path()
+  local home = os.getenv("HOME")
+  local gobin = os.getenv("GOBIN")
+  local gopath = os.getenv("GOPATH")
+
+  -- Если GOBIN не определен, но GOPATH определен
+  if not gobin and gopath then
+    gobin = gopath .. "/bin"
+  end
+
+  -- Если GOBIN всё еще не определен, используем ~/go/bin
+  if not gobin then
+    gobin = home .. "/go/bin"
+  end
+
+  -- Добавляем в PATH
+  local path = os.getenv("PATH")
+  if path and not string.find(path, gobin) then
+    vim.env.PATH = gobin .. ":" .. path
+    print("Добавлен " .. gobin .. " в PATH")
+  end
+end
+
+setup_go_path()
