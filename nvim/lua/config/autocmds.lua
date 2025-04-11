@@ -72,7 +72,12 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 vim.api.nvim_create_autocmd("filetype", {
   -- group = augroup("wrap_spell"),
   pattern = { "go" },
-  command = 'lua require("cmp").setup { enabled = true }',
+  callback = function()
+    local ok, cmp = pcall(require, "cmp")
+    if ok then
+      cmp.setup({ enabled = true })
+    end
+  end,
 })
 
 -- Disable auto formatting and markdown rendering on the Index
