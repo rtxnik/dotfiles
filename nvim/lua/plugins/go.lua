@@ -5,11 +5,11 @@ return {
       "ray-x/guihua.lua",
       "neovim/nvim-lspconfig",
       "nvim-treesitter/nvim-treesitter",
-      "mfussenegger/nvim-dap", -- Важная зависимость для GoRun
+      "mfussenegger/nvim-dap",
     },
     config = function()
       require("go").setup({
-        go = "go", -- Убедитесь, что это соответствует пути к вашему исполняемому файлу go
+        go = "go",
         format = {
           enable = true,
           auto_format = true,
@@ -17,43 +17,26 @@ return {
         },
         run = {
           enable = true,
-          cmd = "go run", -- Явная команда для GoRun
-          split = "vs", -- Поведение разделения для вывода
+          cmd = "go run",
+          split = "vs",
         },
         dap_debug = false,
+        -- Игнорируем предупреждение golangci-lint
+        linter = {
+          enable = false,
+        },
         lsp_gofumpt = true,
         lsp_inlay_hints = {
           enable = true,
         },
-        -- Убедитесь, что команды для тестов и запуска загружены
+        -- Базовые команды
         test = {
           enable = true,
         },
-        -- Убедитесь, что команды регистрируются
         commands = {
           load = true,
         },
       })
-
-      -- Альтернативный вариант - создаем собственную команду, которая просто запускает go run через терминал
-      vim.api.nvim_create_user_command("GoRun", function()
-        -- Получаем текущий буфер/файл
-        local filename = vim.fn.expand("%:p")
-        -- Создаем команду для запуска
-        local cmd = string.format("term go run %s", filename)
-        -- Выполняем команду
-        vim.cmd(cmd)
-      end, {})
-
-      -- Еще один вариант - запуск через системную команду!
-      vim.api.nvim_create_user_command("GoRunS", function()
-        -- Получаем текущий буфер/файл
-        local filename = vim.fn.expand("%:p")
-        -- Создаем команду для запуска
-        local cmd = string.format("!go run %s", filename)
-        -- Выполняем команду
-        vim.cmd(cmd)
-      end, {})
 
       -- Запускать форматирование при сохранении
       local format_sync_grp = vim.api.nvim_create_augroup("GoFormat", {})
@@ -64,6 +47,27 @@ return {
         end,
         group = format_sync_grp,
       })
+
+      -- Ручная регистрация команд запуска Go
+      vim.api.nvim_create_user_command("GoRun", function()
+        local filename = vim.fn.expand("%:p")
+        local cmd = string.format("term go run %s", filename)
+        vim.cmd(cmd)
+      end, {})
+
+      vim.api.nvim_create_user_command("GoRunS", function()
+        local filename = vim.fn.expand("%:p")
+        local cmd = string.format("!go run %s", filename)
+        vim.cmd(cmd)
+      end, {})
+
+      -- Новые горячие клавиши для Go
+      vim.keymap.set("n", "<leader>mr", "<cmd>GoRun<CR>", { desc = "Go Run" })
+      vim.keymap.set("n", "<leader>mt", "<cmd>GoTest<CR>", { desc = "Go Test" })
+      vim.keymap.set("n", "<leader>mf", "<cmd>GoTestFunc<CR>", { desc = "Go Test Function" })
+      vim.keymap.set("n", "<leader>mc", "<cmd>GoCoverage<CR>", { desc = "Go Coverage" })
+      vim.keymap.set("n", "<leader>mi", "<cmd>GoImport<CR>", { desc = "Go Import" })
+      vim.keymap.set("n", "<leader>ms", "<cmd>GoRunS<CR>", { desc = "Go Run (System)" })
     end,
     event = { "BufReadPost", "BufNewFile" },
     ft = { "go", "gomod" },
