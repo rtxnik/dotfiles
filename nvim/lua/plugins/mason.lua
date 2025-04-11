@@ -4,23 +4,17 @@ return {
     opts = {
       ensure_installed = {
         -- LSPs
-        "gopls", -- Go language server
-        "delve", -- Go debugger
+        "gopls",
 
-        -- Linters
-        "golangci-lint",
+        -- Отладчик
+        "delve",
 
-        -- Formatters
+        -- Форматировщики
         "gofumpt",
         "goimports",
-        "gomodifytags",
-        "gotests",
-        "impl",
 
-        -- Другие инструменты, которые могут понадобиться
+        -- Другие инструменты
         "stylua",
-        "shellcheck",
-        "shfmt",
       },
     },
   },
