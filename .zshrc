@@ -257,3 +257,4 @@ eval $(thefuck --alias fk)
 
 
 fpath+=~/.zfunc; autoload -Uz compinit; compinit
+export PATH=$PATH:$(go env GOPATH)/bin
