@@ -56,4 +56,10 @@ vim.keymap.set("n", "<leader>gt", "<cmd>GoTest<CR>", { desc = "Go Test" })
 vim.keymap.set("n", "<leader>hy", "i{{< youtube id >}}<Esc>", { desc = "Hugo Youtube" })
 vim.keymap.set("n", "<leader>zp", "ggi---<CR>publish: true<CR>---<CR><CR><Esc>", { desc = "Zettelkasten Publish" })
 
+-- Add these to your keymaps.lua file
+-- Go related keymaps
 vim.keymap.set("n", "<leader>gr", "<cmd>GoRun<CR>", { desc = "Go Run" })
+vim.keymap.set("n", "<leader>gt", "<cmd>GoTest<CR>", { desc = "Go Test" })
+vim.keymap.set("n", "<leader>gtf", "<cmd>GoTestFunc<CR>", { desc = "Go Test Function" })
+vim.keymap.set("n", "<leader>gim", "<cmd>GoImport<CR>", { desc = "Go Import" })
+vim.keymap.set("n", "<leader>gca", "<cmd>GoCoverage<CR>", { desc = "Go Coverage" })
