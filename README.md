@@ -2,7 +2,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
-Personal collection of **dotfiles**—configuration files and scripts to unify and automate my development environment on macOS and Linux.
+A carefully crafted development environment for macOS and Linux—shell configurations, editor settings, and productivity scripts designed for efficiency and consistency.
 
 ---
 
