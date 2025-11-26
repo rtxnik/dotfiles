@@ -1,0 +1,8 @@
+[settings.node]
+gpg_verify = false
+
+[tools]
+node = "lts"
+bun = "latest"
+deno = "latest"
+pnpm = "latest"

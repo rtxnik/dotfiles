@@ -1,0 +1,10 @@
+[tools]
+kubectl = "latest"
+helm = "latest"
+k9s = "latest"
+kind = "latest"
+stern = "latest"
+flux2 = "latest"
+argocd = "latest"
+jq = "latest"
+yq = "latest"

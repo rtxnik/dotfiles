@@ -1,0 +1,5 @@
+[tools]
+opentofu = "latest"
+k9s = "latest"
+jq = "latest"
+yq = "latest"

@@ -1,0 +1,9 @@
+[tools]
+jq = "latest"
+yq = "latest"
+fzf = "latest"
+ripgrep = "latest"
+fd = "latest"
+bat = "latest"
+lsd = "latest"
+delta = "latest"
