@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ws - Devpod workspace manager
+# =============================================================================
+
+set -euo pipefail
+
+readonly VERSION="1.0.0"
+readonly WORKSPACES_DIR="${WORKSPACES_DIR:-$HOME/workspaces}"
+readonly PROFILES_DIR="${PROFILES_DIR:-$HOME/.config/workspaces/profiles}"
+
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+
+die() { printf '\033[31mError:\033[0m %s\n' "$1" >&2; exit 1; }
+info() { printf '\033[34m==>\033[0m %s\n' "$1"; }
+success() { printf '\033[32m✓\033[0m %s\n' "$1"; }
+
+usage() {
+    cat <<EOF
+Usage: ws <command> [args]
+
+Commands:
+  new <name> [profile]   Create workspace (profiles: default, devops, k8s, web)
+  list                   List workspaces
+  profiles               Show available profiles
+  start <name>           Start workspace
+  stop <name>            Stop workspace
+  delete <name>          Delete workspace
+  ssh <name>             SSH into workspace
+  code <name>            Open in VS Code
+
+Environment:
+  WORKSPACES_DIR         Storage location (default: ~/workspaces)
+  PROFILES_DIR           Profiles location (default: ~/.config/workspaces/profiles)
+
+Version: $VERSION
+EOF
+    exit 0
+}
+
+require_name() {
+    [[ -n "${1:-}" ]] || die "Workspace name required"
+}
+
+workspace_exists() {
+    [[ -d "$WORKSPACES_DIR/$1" ]]
+}
+
+profile_exists() {
+    [[ -d "$PROFILES_DIR/$1" ]]
+}
+
+# -----------------------------------------------------------------------------
+# Commands
+# -----------------------------------------------------------------------------
+
+cmd_new() {
+    local name="${1:-}"
+    local profile="${2:-default}"
+
+    require_name "$name"
+    workspace_exists "$name" && die "Workspace '$name' already exists"
+    profile_exists "$profile" || die "Profile '$profile' not found"
+
+    local ws_dir="$WORKSPACES_DIR/$name"
+    local profile_dir="$PROFILES_DIR/$profile"
+
+    info "Creating workspace '$name' with profile '$profile'"
+
+    mkdir -p "$ws_dir/.devcontainer"
+    cp "$profile_dir/devcontainer.json" "$ws_dir/.devcontainer/"
+    cp "$profile_dir/Dockerfile" "$ws_dir/.devcontainer/"
+    cp "$profile_dir/post-create.sh" "$ws_dir/.devcontainer/"
+    chmod +x "$ws_dir/.devcontainer/post-create.sh"
+
+    [[ -f "$profile_dir/mise.toml" ]] && cp "$profile_dir/mise.toml" "$ws_dir/.mise.toml"
+
+    success "Created: $ws_dir"
+    echo "Start with: ws start $name"
+}
+
+cmd_list() {
+    [[ -d "$WORKSPACES_DIR" ]] || die "No workspaces directory"
+
+    echo "Workspaces:"
+    echo
+
+    local count=0
+    for dir in "$WORKSPACES_DIR"/*/; do
+        [[ -d "$dir" ]] || continue
+        local name=$(basename "$dir")
+        local profile="unknown"
+
+        if [[ -f "$dir/.devcontainer/devcontainer.json" ]]; then
+            profile=$(grep -o '"WORKSPACE_PROFILE": *"[^"]*"' "$dir/.devcontainer/devcontainer.json" 2>/dev/null | cut -d'"' -f4 || echo "?")
+        fi
+
+        printf "  %-20s %s\n" "$name" "($profile)"
+        ((count++)) || true
+    done
+
+    [[ $count -eq 0 ]] && echo "  (none)"
+}
+
+cmd_profiles() {
+    [[ -d "$PROFILES_DIR" ]] || die "No profiles directory"
+
+    echo "Available profiles:"
+    echo
+
+    for dir in "$PROFILES_DIR"/*/; do
+        [[ -d "$dir" ]] || continue
+        echo "  $(basename "$dir")"
+    done
+}
+
+cmd_start() {
+    require_name "${1:-}"
+    workspace_exists "$1" || die "Workspace '$1' not found"
+    info "Starting $1"
+    devpod up "$WORKSPACES_DIR/$1"
+}
+
+cmd_stop() {
+    require_name "${1:-}"
+    info "Stopping $1"
+    devpod stop "$1"
+}
+
+cmd_delete() {
+    local name="${1:-}"
+    require_name "$name"
+
+    devpod delete "$name" 2>/dev/null || true
+
+    if workspace_exists "$name"; then
+        read -p "Remove directory $WORKSPACES_DIR/$name? [y/N] " -n 1 -r
+        echo
+        [[ $REPLY =~ ^[Yy]$ ]] && rm -rf "$WORKSPACES_DIR/$name" && success "Removed"
+    fi
+}
+
+cmd_ssh() {
+    require_name "${1:-}"
+    devpod ssh "$1"
+}
+
+cmd_code() {
+    require_name "${1:-}"
+    workspace_exists "$1" || die "Workspace '$1' not found"
+    devpod up "$WORKSPACES_DIR/$1" --ide vscode
+}
+
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
+
+main() {
+    case "${1:-}" in
+        new)      shift; cmd_new "$@" ;;
+        list|ls)  cmd_list ;;
+        profiles) cmd_profiles ;;
+        start)    shift; cmd_start "$@" ;;
+        stop)     shift; cmd_stop "$@" ;;
+        delete|rm) shift; cmd_delete "$@" ;;
+        ssh)      shift; cmd_ssh "$@" ;;
+        code)     shift; cmd_code "$@" ;;
+        -h|--help|help|"") usage ;;
+        -v|--version) echo "ws $VERSION" ;;
+        *)        die "Unknown command: $1. Use 'ws help' for usage." ;;
+    esac
+}
+
+main "$@"
