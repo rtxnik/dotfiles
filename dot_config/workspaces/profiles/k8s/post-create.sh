@@ -25,13 +25,15 @@ fi
 
 export PATH="$HOME/.local/bin:$PATH"
 
-# Trust global config from dotfiles
-mise trust "$HOME/.config/mise/config.toml" 2>/dev/null || true
-
-# Trust and install workspace profile tools
 if [[ -f "$PWD/.mise.toml" ]]; then
-    log "Installing mise tools"
+    log "Merging mise configs (global + workspace)"
+    mise trust "$HOME/.config/mise/config.toml" 2>/dev/null || true
     mise trust "$PWD/.mise.toml"
+    
+    echo "" >> "$HOME/.config/mise/config.toml"
+    echo "# Workspace profile tools" >> "$HOME/.config/mise/config.toml"
+    grep '=' "$PWD/.mise.toml" >> "$HOME/.config/mise/config.toml"
+    
     mise install --yes || true
 fi
 
