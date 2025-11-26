@@ -6,7 +6,7 @@
 # SSH / GPG
 # -----------------------------------------------------------------------------
 
-if [[ -z "$REMOTE_CONTAINERS" && -z "$CODESPACES" && -z "$DEVCONTAINER_TYPE" ]]; then
+if [[ -z "$REMOTE_CONTAINERS" && -z "$CODESPACES" && -z "$DEVCONTAINER_TYPE" && -z "$DEVPOD" ]]; then
     export GPG_TTY="$(tty)"
     unset SSH_AGENT_PID
     if [ "${gnupg_SSH_AUTH_SOCK_by:-0}" -ne $$ ]; then
