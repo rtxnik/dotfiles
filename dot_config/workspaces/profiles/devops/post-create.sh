@@ -33,8 +33,10 @@ fi
 # Mise tools
 export PATH="$HOME/.local/bin:$PATH"
 if [[ -f "$PWD/.mise.toml" ]]; then
-    log "Installing mise tools"
-    mise trust "$PWD/.mise.toml"
+    log "Installing mise tools globally"
+    mkdir -p "$HOME/.config/mise"
+    cp "$PWD/.mise.toml" "$HOME/.config/mise/config.toml"
+    mise trust "$HOME/.config/mise/config.toml"
     mise install --yes
 fi
 
