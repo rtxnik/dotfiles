@@ -1,0 +1,12 @@
+#!/bin/bash
+# packages hash: {{ include "dot_config/mise/config.toml" | sha256sum }}
+
+set -euo pipefail
+
+mise_bin="$HOME/.local/bin/mise"
+
+[[ -x "$mise_bin" ]] || exit 0
+
+"$mise_bin" trust "$HOME/.config/mise/config.toml" 2>/dev/null || true
+"$mise_bin" trust "$HOME/.local/share/chezmoi" 2>/dev/null || true
+"$mise_bin" install --yes
