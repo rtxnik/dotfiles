@@ -1,0 +1,13 @@
+[settings.node]
+gpg_verify = false
+
+[tools]
+neovim = "latest"
+ripgrep = "latest"
+lsd = "latest"
+bat = "latest"
+fzf = "latest"
+fd = "latest"
+node = "latest"
+chezmoi = "latest"
+usage = "latest"
