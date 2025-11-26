@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Show PATH entries, one per line
+echo "${PATH//:/\\n}"

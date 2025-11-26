@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# =============================================================================
+# push - Quick git add, commit, push
+# =============================================================================
+
+set -euo pipefail
+
+if [[ $# -gt 0 ]]; then
+    msg="$*"
+else
+    read -p "Commit message: " msg
+fi
+
+[[ -z "$msg" ]] && { echo "Aborted: empty message"; exit 1; }
+
+git add .
+git commit -m "$msg"
+git push
