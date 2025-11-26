@@ -1,0 +1,156 @@
+# =============================================================================
+# ZSH Configuration
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SSH / GPG
+# -----------------------------------------------------------------------------
+
+if [[ -z "$REMOTE_CONTAINERS" && -z "$CODESPACES" && -z "$DEVCONTAINER_TYPE" ]]; then
+    export GPG_TTY="$(tty)"
+    unset SSH_AGENT_PID
+    if [ "${gnupg_SSH_AUTH_SOCK_by:-0}" -ne $$ ]; then
+        export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
+    fi
+    gpgconf --launch gpg-agent
+    gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1
+fi
+
+# -----------------------------------------------------------------------------
+# Environment
+# -----------------------------------------------------------------------------
+
+export LANG="en_US.UTF-8"
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+command -v nvim >/dev/null && export EDITOR="nvim" VISUAL="nvim"
+command -v zen >/dev/null && export BROWSER="zen"
+
+# Directories
+export REPOS="$HOME/Repos"
+export GITUSER="rtxnik"
+export GHREPOS="$REPOS/github.com/$GITUSER"
+export DOTFILES="$HOME/.local/share/chezmoi"
+export SCRIPTS="$DOTFILES/scripts"
+export ZETTELKASTEN="$HOME/Zettelkasten"
+
+# -----------------------------------------------------------------------------
+# Mise
+# -----------------------------------------------------------------------------
+
+if [[ -x "$HOME/.local/bin/mise" ]]; then
+    eval "$("$HOME/.local/bin/mise" activate zsh)"
+fi
+
+# -----------------------------------------------------------------------------
+# Path
+# -----------------------------------------------------------------------------
+
+typeset -U path
+path=(
+    "$HOME/.local/bin"
+    "$HOME/bin"
+    "$SCRIPTS/core"
+    "$SCRIPTS/dev"
+    "$HOME/.krew/bin"
+    "$HOME/.rd/bin"
+    $path
+)
+path=($^path(N-/))
+export PATH
+
+# Homebrew (Linux)
+[[ -d "/home/linuxbrew/.linuxbrew" ]] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# -----------------------------------------------------------------------------
+# History
+# -----------------------------------------------------------------------------
+
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=100000
+SAVEHIST=100000
+
+setopt HIST_IGNORE_SPACE
+setopt HIST_IGNORE_DUPS
+setopt SHARE_HISTORY
+
+# -----------------------------------------------------------------------------
+# Prompt
+# -----------------------------------------------------------------------------
+
+PURE_GIT_PULL=0
+
+if [[ -d "$HOME/.zsh/pure" ]]; then
+    fpath+=("$HOME/.zsh/pure")
+elif [[ "$OSTYPE" == darwin* ]] && command -v brew >/dev/null; then
+    fpath+=("$(brew --prefix)/share/zsh/site-functions")
+fi
+
+autoload -U promptinit && promptinit
+prompt pure
+
+# Vi mode
+bindkey -v
+export KEYTIMEOUT=1
+
+# -----------------------------------------------------------------------------
+# Aliases
+# -----------------------------------------------------------------------------
+
+# Better defaults
+command -v bat >/dev/null && alias cat="bat"
+command -v lsd >/dev/null && alias ls="lsd" ll="ls -lgh" la="ls -lathr" lt="ls --tree"
+
+# Editor
+alias v="nvim"
+
+# Navigation
+alias ..="cd .."
+alias dot="cd \$DOTFILES"
+alias repos="cd \$REPOS"
+alias ghrepos="cd \$GHREPOS"
+alias zk="cd \$ZETTELKASTEN"
+
+# System
+alias e="exit"
+alias c="clear"
+alias t="tmux"
+
+# Git
+alias gs="git status"
+alias ga="git add"
+alias gc="git commit -m"
+alias gp="git push"
+alias gpl="git pull"
+alias gl="git log --graph --oneline --all --decorate"
+alias lg="lazygit"
+
+# Fzf
+alias fp="fzf --preview 'bat --style=numbers --color=always --line-range :500 {}'"
+alias vf='v $(fp)'
+
+# macOS
+[[ "$OSTYPE" == darwin* ]] && alias brewup="brew update && brew upgrade && brew cleanup"
+
+# -----------------------------------------------------------------------------
+# Completion
+# -----------------------------------------------------------------------------
+
+fpath+=("$HOME/.zfunc")
+
+if [[ "$OSTYPE" == darwin* ]] && command -v brew >/dev/null; then
+    FPATH="$(brew --prefix)/share/zsh-completions:$FPATH"
+fi
+
+autoload -Uz compinit && compinit -u
+zstyle ':completion:*' menu select
+
+command -v fzf >/dev/null && source <(fzf --zsh)
+command -v mise >/dev/null && source <(mise completion zsh)
+
+# -----------------------------------------------------------------------------
+# Local overrides
+# -----------------------------------------------------------------------------
+
+[[ -f "$HOME/.privaterc" ]] && source "$HOME/.privaterc"
+command -v direnv >/dev/null && eval "$(direnv hook zsh)"
