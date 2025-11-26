@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Bootstrap script for dotfiles
+# =============================================================================
+
+set -euo pipefail
+
+info() { printf '\033[34m==>\033[0m %s\n' "$1"; }
+success() { printf '\033[32m✓\033[0m %s\n' "$1"; }
+
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+# Set zsh as default shell
+if command -v zsh &>/dev/null; then
+    info "Setting zsh as default shell"
+    sudo chsh -s "$(command -v zsh)" "$USER" 2>/dev/null || true
+fi
+
+# Install chezmoi and apply dotfiles
+if ! command -v chezmoi &>/dev/null; then
+    info "Installing chezmoi"
+    sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply git@github.com:rtxnik/dotfiles.git
+fi
+
+# Pure prompt
+if [[ ! -d "$HOME/.zsh/pure" ]]; then
+    info "Installing pure prompt"
+    mkdir -p "$HOME/.zsh"
+    git clone --depth=1 https://github.com/sindresorhus/pure.git "$HOME/.zsh/pure"
+fi
+
+# Alacritty themes (macOS only)
+if [[ "$OSTYPE" == darwin* ]] && command -v alacritty &>/dev/null; then
+    if [[ ! -d "$XDG_CONFIG_HOME/alacritty/themes" ]]; then
+        info "Installing alacritty themes"
+        mkdir -p "$XDG_CONFIG_HOME/alacritty"
+        git clone --depth=1 https://github.com/alacritty/alacritty-theme "$XDG_CONFIG_HOME/alacritty/themes"
+    fi
+fi
+
+success "Setup complete"
