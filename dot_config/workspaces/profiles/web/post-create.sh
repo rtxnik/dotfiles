@@ -11,7 +11,7 @@ fi
 
 if ! command -v chezmoi &>/dev/null; then
     log "Installing chezmoi and applying dotfiles"
-    sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply https://github.com/rtxnik/dotfiles.git
+    sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply git@github.com:rtxnik/dotfiles.git
 else
     log "Updating dotfiles"
     chezmoi update --apply || true
@@ -34,4 +34,5 @@ if [[ -f "$PWD/.mise.toml" ]]; then
     mise trust "$PWD/.mise.toml"
     mise install --yes || true
 fi
+
 log "Setup complete"
