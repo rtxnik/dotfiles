@@ -24,13 +24,15 @@ if [[ ! -d "$HOME/.zsh/pure" ]]; then
 fi
 
 export PATH="$HOME/.local/bin:$PATH"
+
+# Trust global config from dotfiles
+mise trust "$HOME/.config/mise/config.toml" 2>/dev/null || true
+
+# Trust and install workspace profile tools
 if [[ -f "$PWD/.mise.toml" ]]; then
-    log "Installing mise tools globally"
+    log "Installing mise tools"
     mise trust "$PWD/.mise.toml"
-    mkdir -p "$HOME/.config/mise"
-    cp "$PWD/.mise.toml" "$HOME/.config/mise/config.toml"
-    mise trust "$HOME/.config/mise/config.toml"
-    mise install --yes
+    mise install --yes || true
 fi
 
 log "Setup complete"
