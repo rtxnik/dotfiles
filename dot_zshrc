@@ -159,3 +159,13 @@ command -v mise >/dev/null && source <(mise completion zsh)
 
 [[ -f "$HOME/.privaterc" ]] && source "$HOME/.privaterc"
 command -v direnv >/dev/null && eval "$(direnv hook zsh)"
+
+# -----------------------------------------------------------------------------
+# Autosuggestions
+# -----------------------------------------------------------------------------
+
+if [[ -f /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+    source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+elif [[ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+    source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+fi
