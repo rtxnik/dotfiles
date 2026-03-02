@@ -235,8 +235,11 @@ proxy_down() {
 
 proxy_status() {
     if docker inspect "$PROXY_CONTAINER" &>/dev/null; then
-        docker ps --filter "name=^/${PROXY_CONTAINER}$" \
-            --format "  Status: {{.Status}}"
+        local status health
+        status=$(docker inspect -f '{{.State.Status}}' "$PROXY_CONTAINER")
+        health=$(docker inspect -f '{{.State.Health.Status}}' "$PROXY_CONTAINER" 2>/dev/null || echo "none")
+        echo "  Status: $status"
+        echo "  Health: $health"
     else
         echo "  Proxy is not running"
     fi

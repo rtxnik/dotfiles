@@ -24,4 +24,7 @@ RUN apt-get update \
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -sf --max-time 5 https://ifconfig.me || exit 1
+
 ENTRYPOINT ["/entrypoint.sh"]
