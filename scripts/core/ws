@@ -188,24 +188,51 @@ inject_proxy_network() {
 cmd_list() {
     [[ -d "$WORKSPACES_DIR" ]] || die "No workspaces directory"
 
-    echo "Workspaces:"
-    echo
-
     local count=0
+    local names=() statuses=() profiles=()
+
+    # Collect devpod status if available
+    local devpod_json=""
+    if command -v devpod &>/dev/null; then
+        devpod_json=$(devpod list --output json 2>/dev/null || echo "")
+    fi
+
     for dir in "$WORKSPACES_DIR"/*/; do
         [[ -d "$dir" ]] || continue
-        local name=$(basename "$dir")
-        local profile="unknown"
+        local name
+        name=$(basename "$dir")
+        local profile="unknown" status="Unknown"
 
         if [[ -f "$dir/.devcontainer/devcontainer.json" ]]; then
             profile=$(grep -o '"WORKSPACE_PROFILE": *"[^"]*"' "$dir/.devcontainer/devcontainer.json" 2>/dev/null | cut -d'"' -f4 || echo "?")
         fi
 
-        printf "  %-20s %s\n" "$name" "($profile)"
+        if [[ -n "$devpod_json" ]]; then
+            local raw_status
+            raw_status=$(printf '%s' "$devpod_json" | grep -o "\"id\":\"$name\"[^}]*\"status\":\"[^\"]*\"" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || echo "")
+            [[ -n "$raw_status" ]] && status="$raw_status"
+        fi
+
+        names+=("$name")
+        statuses+=("$status")
+        profiles+=("$profile")
         ((count++)) || true
     done
 
-    [[ $count -eq 0 ]] && echo "  (none)"
+    if [[ $count -eq 0 ]]; then
+        echo "  (no workspaces)"
+        return
+    fi
+
+    printf "  ${BOLD}%-22s %-12s %s${RESET}\n" "NAME" "STATUS" "PROFILE"
+    for i in "${!names[@]}"; do
+        local color="$DIM"
+        case "${statuses[$i]}" in
+            Running) color="$GREEN" ;;
+            Stopped) color="$RED" ;;
+        esac
+        printf "  %-22s ${color}%-12s${RESET} %s\n" "${names[$i]}" "${statuses[$i]}" "${profiles[$i]}"
+    done
 }
 
 cmd_profiles() {
@@ -213,10 +240,31 @@ cmd_profiles() {
 
     echo "Available profiles:"
     echo
+    printf "  ${BOLD}%-12s %-16s %s${RESET}\n" "NAME" "BASE IMAGE" "TOOLS"
 
     for dir in "$PROFILES_DIR"/*/; do
         [[ -d "$dir" ]] || continue
-        echo "  $(basename "$dir")"
+        local name
+        name=$(basename "$dir")
+        [[ "$name" == "proxy" ]] && continue
+
+        local base_image="-"
+        if [[ -f "$dir/Dockerfile" ]]; then
+            local from_line
+            from_line=$(grep -m1 '^FROM ' "$dir/Dockerfile" 2>/dev/null || echo "")
+            if [[ -n "$from_line" ]]; then
+                base_image="${from_line##*:}"
+            fi
+        fi
+
+        local tools="-"
+        if [[ -f "$dir/mise.toml" ]]; then
+            local tool_list
+            tool_list=$(grep -E '^[a-z]' "$dir/mise.toml" | cut -d= -f1 | tr -d ' ' | paste -sd', ')
+            [[ -n "$tool_list" ]] && tools="$tool_list"
+        fi
+
+        printf "  %-12s %-16s %s\n" "$name" "$base_image" "$tools"
     done
 }
 
