@@ -40,12 +40,16 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply git@github.com:rtxnik/dotfi
 |---------|-------|
 | `default` | jq, yq, fzf, ripgrep, fd, bat, lsd |
 | `devops` | opentofu, ansible, k9s, network utils |
+| `go` | go, golangci-lint, node (lts), dev tools |
 | `k8s` | kubectl, helm, kind, flux, argocd |
 | `web` | node, bun, deno, pnpm |
 
-Usage:
+The `go` profile routes traffic through an isolated Docker proxy network.
+Start the proxy first:
+
 ```bash
-ws new myproject k8s
+ws proxy up              # start dev-proxy container on devnet
+ws new myproject go      # create Go workspace (connects to devnet)
 ws start myproject
 ws ssh myproject
 ```

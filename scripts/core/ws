@@ -5,9 +5,12 @@
 
 set -euo pipefail
 
-readonly VERSION="1.0.0"
+readonly VERSION="1.1.0"
 readonly WORKSPACES_DIR="${WORKSPACES_DIR:-$HOME/workspaces}"
 readonly PROFILES_DIR="${PROFILES_DIR:-$HOME/.config/workspaces/profiles}"
+readonly PROXY_CONTAINER="dev-proxy"
+readonly PROXY_NETWORK="devnet"
+readonly PROXY_IMAGE="devpod-proxy"
 
 # -----------------------------------------------------------------------------
 # Helpers
@@ -22,7 +25,7 @@ usage() {
 Usage: ws <command> [args]
 
 Commands:
-  new <name> [profile]   Create workspace (profiles: default, devops, k8s, web)
+  new <name> [profile]   Create workspace (profiles: default, devops, go, k8s, web)
   list                   List workspaces
   profiles               Show available profiles
   start <name>           Start workspace
@@ -30,6 +33,7 @@ Commands:
   delete <name>          Delete workspace
   ssh <name>             SSH into workspace
   code <name>            Open in VS Code
+  proxy <subcmd>         Manage proxy container (up|down|status|logs)
 
 Environment:
   WORKSPACES_DIR         Storage location (default: ~/workspaces)
@@ -153,6 +157,69 @@ cmd_code() {
     devpod up "$WORKSPACES_DIR/$1" --ide vscode
 }
 
+cmd_proxy() {
+    case "${1:-}" in
+        up)     proxy_up ;;
+        down)   proxy_down ;;
+        status) proxy_status ;;
+        logs)   proxy_logs ;;
+        *)      die "Usage: ws proxy [up|down|status|logs]" ;;
+    esac
+}
+
+proxy_up() {
+    local config="$HOME/.config/xray/config.json"
+    [[ -f "$config" ]] || die "Xray config not found: $config"
+
+    if ! docker network inspect "$PROXY_NETWORK" &>/dev/null; then
+        info "Creating network $PROXY_NETWORK"
+        docker network create "$PROXY_NETWORK"
+    fi
+
+    if docker inspect "$PROXY_CONTAINER" &>/dev/null; then
+        success "Proxy already running"
+        proxy_status
+        return
+    fi
+
+    if ! docker image inspect "$PROXY_IMAGE" &>/dev/null; then
+        info "Building proxy image"
+        docker build -t "$PROXY_IMAGE" "$PROFILES_DIR/proxy"
+    fi
+
+    info "Starting proxy container"
+    docker run -d \
+        --name "$PROXY_CONTAINER" \
+        --network "$PROXY_NETWORK" \
+        --restart unless-stopped \
+        -v "$config:/etc/xray/config.json:ro" \
+        -p 10808:10808 \
+        -p 10809:10809 \
+        "$PROXY_IMAGE"
+
+    success "Proxy started (SOCKS5 :10808, HTTP :10809)"
+}
+
+proxy_down() {
+    info "Stopping proxy container"
+    docker stop "$PROXY_CONTAINER" 2>/dev/null || true
+    docker rm "$PROXY_CONTAINER" 2>/dev/null || true
+    success "Proxy stopped"
+}
+
+proxy_status() {
+    if docker inspect "$PROXY_CONTAINER" &>/dev/null; then
+        docker ps --filter "name=^/${PROXY_CONTAINER}$" \
+            --format "  Status: {{.Status}}\n  Ports:  {{.Ports}}"
+    else
+        echo "  Proxy is not running"
+    fi
+}
+
+proxy_logs() {
+    docker logs --tail=50 "$PROXY_CONTAINER" || die "Proxy is not running"
+}
+
 # -----------------------------------------------------------------------------
 # Main
 # -----------------------------------------------------------------------------
@@ -167,6 +234,7 @@ main() {
         delete|rm) shift; cmd_delete "$@" ;;
         ssh)      shift; cmd_ssh "$@" ;;
         code)     shift; cmd_code "$@" ;;
+        proxy)    shift; cmd_proxy "$@" ;;
         -h|--help|help|"") usage ;;
         -v|--version) echo "ws $VERSION" ;;
         *)        die "Unknown command: $1. Use 'ws help' for usage." ;;
