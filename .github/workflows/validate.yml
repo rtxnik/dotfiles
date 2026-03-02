@@ -14,6 +14,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: bash -n on all scripts
+        shell: bash
         run: |
           fail=0
           while IFS= read -r f; do
@@ -23,14 +24,13 @@ jobs:
               echo "FAIL: $f"
               fail=1
             fi
-          done < <(find . -name '*.sh' -o -name 'ws' -o -name 'setup' | grep -v node_modules)
+          done < <(find . \( -name '*.sh' -o -name 'ws' -o -name 'setup' \) | grep -v node_modules)
           exit $fail
 
       - name: shellcheck (advisory)
         continue-on-error: true
         run: |
-          sudo apt-get install -y --no-install-recommends shellcheck
-          find . -name '*.sh' -o -name 'ws' -o -name 'setup' | grep -v node_modules | \
+          find . \( -name '*.sh' -o -name 'ws' -o -name 'setup' \) | grep -v node_modules | \
             xargs shellcheck --severity=warning || true
 
   chezmoi:
@@ -43,6 +43,8 @@ jobs:
         run: sh -c "$(curl -fsLS get.chezmoi.io)"
 
       - name: chezmoi apply --dry-run
+        shell: bash
         run: |
-          ~/bin/chezmoi init --source "$PWD"
-          ~/bin/chezmoi apply --dry-run --source "$PWD" || true
+          export PATH="$HOME/bin:$PATH"
+          chezmoi init --source "$PWD"
+          chezmoi apply --dry-run --source "$PWD" || true
