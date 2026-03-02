@@ -1,72 +1,169 @@
 {
-    "log": {
-        "loglevel": "warning"
-    },
-    "inbounds": [
-        {
-            "tag": "transparent",
-            "port": 12345,
-            "protocol": "dokodemo-door",
-            "settings": {
-                "network": "tcp",
-                "followRedirect": true
-            },
-            "sniffing": {
-                "enabled": true,
-                "destOverride": ["http", "tls", "quic"]
-            }
-        }
-    ],
-    "outbounds": [
-        {
-            "tag": "proxy",
-            "protocol": "vless",
-            "settings": {
-                "vnext": [
-                    {
-                        "address": "YOUR_SERVER",
-                        "port": 443,
-                        "users": [
-                            {
-                                "id": "YOUR_UUID",
-                                "encryption": "none",
-                                "flow": ""
-                            }
-                        ]
-                    }
-                ]
-            },
-            "streamSettings": {
-                "network": "YOUR_TRANSPORT",
-                "security": "reality",
-                "realitySettings": {
-                    "serverName": "YOUR_SNI",
-                    "fingerprint": "chrome",
-                    "publicKey": "YOUR_PUBLIC_KEY",
-                    "shortId": "YOUR_SHORT_ID",
-                    "spiderX": ""
-                }
-            }
-        },
-        {
-            "tag": "direct",
-            "protocol": "freedom",
-            "settings": {}
-        }
-    ],
-    "routing": {
-        "domainStrategy": "IPIfNonMatch",
-        "rules": [
-            {
-                "type": "field",
-                "ip": [
-                    "10.0.0.0/8",
-                    "172.16.0.0/12",
-                    "192.168.0.0/16",
-                    "127.0.0.0/8"
-                ],
-                "outboundTag": "direct"
-            }
-        ]
+  "log": {
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "tag": "transparent",
+      "port": 12345,
+      "protocol": "dokodemo-door",
+      "settings": {
+        "network": "tcp",
+        "followRedirect": true
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
     }
+  ],
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "YOUR_SERVER",
+            "port": 443,
+            "users": [
+              {
+                "id": "YOUR_UUID",
+                "encryption": "none",
+                "flow": ""
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "YOUR_SNI",
+          "fingerprint": "chrome",
+          "publicKey": "YOUR_PUBLIC_KEY",
+          "shortId": "YOUR_SHORT_ID",
+          "spiderX": ""
+        }
+      }
+    },
+    {
+      "tag": "direct",
+      "protocol": "freedom",
+      "settings": {}
+    }
+  ],
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "ip": [
+          "10.0.0.0/8",
+          "172.16.0.0/12",
+          "192.168.0.0/16",
+          "127.0.0.0/8"
+        ],
+        "outboundTag": "direct"
+      }
+    ]
+  },
+  "_transport_examples": {
+    "_description": "Replace the streamSettings block above with one of these",
+    "tcp-reality": {
+      "network": "tcp",
+      "security": "reality",
+      "realitySettings": {
+        "serverName": "YOUR_SNI",
+        "fingerprint": "chrome",
+        "publicKey": "YOUR_PUBLIC_KEY",
+        "shortId": "YOUR_SHORT_ID",
+        "spiderX": ""
+      }
+    },
+    "tcp-http-header": {
+      "network": "tcp",
+      "security": "none",
+      "tcpSettings": {
+        "header": {
+          "type": "http",
+          "request": {
+            "path": ["/"],
+            "headers": {
+              "Host": ["YOUR_HOST"]
+            }
+          }
+        }
+      }
+    },
+    "websocket-tls": {
+      "network": "ws",
+      "security": "tls",
+      "tlsSettings": {
+        "serverName": "YOUR_SNI",
+        "fingerprint": "chrome"
+      },
+      "wsSettings": {
+        "path": "/YOUR_PATH",
+        "headers": {
+          "Host": "YOUR_HOST"
+        }
+      }
+    },
+    "grpc-reality": {
+      "network": "grpc",
+      "security": "reality",
+      "realitySettings": {
+        "serverName": "YOUR_SNI",
+        "fingerprint": "chrome",
+        "publicKey": "YOUR_PUBLIC_KEY",
+        "shortId": "YOUR_SHORT_ID",
+        "spiderX": ""
+      },
+      "grpcSettings": {
+        "serviceName": "YOUR_SERVICE_NAME",
+        "multiMode": false
+      }
+    },
+    "h2-tls": {
+      "network": "h2",
+      "security": "tls",
+      "tlsSettings": {
+        "serverName": "YOUR_SNI",
+        "fingerprint": "chrome"
+      },
+      "httpSettings": {
+        "host": ["YOUR_HOST"],
+        "path": "/YOUR_PATH"
+      }
+    },
+    "httpupgrade-tls": {
+      "network": "httpupgrade",
+      "security": "tls",
+      "tlsSettings": {
+        "serverName": "YOUR_SNI",
+        "fingerprint": "chrome"
+      },
+      "httpupgradeSettings": {
+        "path": "/YOUR_PATH",
+        "host": "YOUR_HOST"
+      }
+    },
+    "xhttp-reality": {
+      "network": "xhttp",
+      "security": "reality",
+      "realitySettings": {
+        "serverName": "YOUR_SNI",
+        "fingerprint": "chrome",
+        "publicKey": "YOUR_PUBLIC_KEY",
+        "shortId": "YOUR_SHORT_ID",
+        "spiderX": ""
+      },
+      "xhttpSettings": {
+        "path": "/YOUR_PATH",
+        "mode": "auto"
+      }
+    }
+  }
 }

@@ -1,0 +1,48 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scripts:
+    name: Shell syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n on all scripts
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if bash -n "$f"; then
+              echo "OK: $f"
+            else
+              echo "FAIL: $f"
+              fail=1
+            fi
+          done < <(find . -name '*.sh' -o -name 'ws' -o -name 'setup' | grep -v node_modules)
+          exit $fail
+
+      - name: shellcheck (advisory)
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y --no-install-recommends shellcheck
+          find . -name '*.sh' -o -name 'ws' -o -name 'setup' | grep -v node_modules | \
+            xargs shellcheck --severity=warning || true
+
+  chezmoi:
+    name: chezmoi dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install chezmoi
+        run: sh -c "$(curl -fsLS get.chezmoi.io)"
+
+      - name: chezmoi apply --dry-run
+        run: |
+          ~/bin/chezmoi init --source "$PWD"
+          ~/bin/chezmoi apply --dry-run --source "$PWD" || true
