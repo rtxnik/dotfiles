@@ -30,9 +30,27 @@ if [[ -f "$PWD/.mise.toml" ]]; then
     mise trust "$HOME/.config/mise/config.toml" 2>/dev/null || true
     mise trust "$PWD/.mise.toml"
 
-    echo "" >> "$HOME/.config/mise/config.toml"
-    echo "# Workspace profile tools" >> "$HOME/.config/mise/config.toml"
-    grep '=' "$PWD/.mise.toml" >> "$HOME/.config/mise/config.toml"
+    global_config="$HOME/.config/mise/config.toml"
+    section=""
+
+    while IFS= read -r line; do
+        if [[ "$line" == "["* ]]; then
+            section="$line"
+            if ! grep -qxF "$section" "$global_config"; then
+                printf '\n%s\n' "$section" >> "$global_config"
+            fi
+            continue
+        fi
+
+        key="${line%%=*}"
+        key="${key%% *}"
+        [[ -z "$key" || "$key" == "#"* || -z "$section" ]] && continue
+
+        sed -i "/^${key} *=/d" "$global_config"
+
+        escaped_section=$(printf '%s\n' "$section" | sed 's/[][\\/.^$*]/\\&/g')
+        sed -i "/^${escaped_section}$/a\\${line}" "$global_config"
+    done < "$PWD/.mise.toml"
 
     mise install --yes || true
 fi
