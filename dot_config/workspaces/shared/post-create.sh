@@ -35,27 +35,83 @@ if [[ -f "$PWD/.mise.toml" ]]; then
     mise trust "$PWD/.mise.toml"
     
     global_config="$HOME/.config/mise/config.toml"
-    section=""
+    merged=$(awk '
+    # Pass 1: read profile (workspace) mise.toml — store section->key->line
+    NR == FNR {
+        if ($0 ~ /^\[/) {
+            p_sec = $0
+            if (!(p_sec in p_order)) {
+                p_order[p_sec] = ++p_count
+            }
+        } else if ($0 ~ /^[[:space:]]*$/ || $0 ~ /^[[:space:]]*#/) {
+            next
+        } else if (p_sec != "") {
+            key = $0
+            sub(/[[:space:]]*=.*/, "", key)
+            p_data[p_sec, key] = $0
+            if (!((p_sec, key) in p_key_order)) {
+                p_keys[p_sec] = p_keys[p_sec] (p_keys[p_sec] ? "\n" : "") key
+                p_key_order[p_sec, key] = 1
+            }
+        }
+        next
+    }
 
-    while IFS= read -r line; do
-        if [[ "$line" == "["* ]]; then
-            section="$line"
-            if ! grep -qxF "$section" "$global_config"; then
-                printf '\n%s\n' "$section" >> "$global_config"
-            fi
-            continue
-        fi
+    # Pass 2: read global config — replace matching keys in correct section
+    {
+        if ($0 ~ /^\[/) {
+            # Flush remaining profile keys for previous section
+            if (g_sec != "" && g_sec in p_keys) {
+                n = split(p_keys[g_sec], arr, "\n")
+                for (i = 1; i <= n; i++) {
+                    if (!((g_sec, arr[i]) in emitted)) {
+                        print p_data[g_sec, arr[i]]
+                    }
+                }
+                delete p_order[g_sec]
+            }
+            g_sec = $0
+            print
+            next
+        }
 
-        key="${line%%=*}"
-        key="${key%% *}"
-        [[ -z "$key" || "$key" == "#"* || -z "$section" ]] && continue
+        if (g_sec != "" && $0 !~ /^[[:space:]]*$/ && $0 !~ /^[[:space:]]*#/) {
+            key = $0
+            sub(/[[:space:]]*=.*/, "", key)
+            if ((g_sec, key) in p_data) {
+                print p_data[g_sec, key]
+                emitted[g_sec, key] = 1
+                next
+            }
+        }
+        print
+    }
 
-        sed -i "/^${key} *=/d" "$global_config"
+    END {
+        # Flush remaining profile keys for last global section
+        if (g_sec != "" && g_sec in p_keys) {
+            n = split(p_keys[g_sec], arr, "\n")
+            for (i = 1; i <= n; i++) {
+                if (!((g_sec, arr[i]) in emitted)) {
+                    print p_data[g_sec, arr[i]]
+                }
+            }
+            delete p_order[g_sec]
+        }
+        # Append sections that only exist in the profile
+        for (sec in p_order) {
+            printf "\n%s\n", sec
+            n = split(p_keys[sec], arr, "\n")
+            for (i = 1; i <= n; i++) {
+                print p_data[sec, arr[i]]
+            }
+        }
+    }
+    ' "$PWD/.mise.toml" "$global_config")
 
-        escaped_section=$(printf '%s\n' "$section" | sed 's/[][\\/.^$*]/\\&/g')
-        sed -i "/^${escaped_section}$/a\\${line}" "$global_config"
-    done < "$PWD/.mise.toml"
-    
+    printf '%s\n' "$merged" > "$global_config.tmp"
+    mv "$global_config.tmp" "$global_config"
+
     mise install --yes || true
 fi
 
