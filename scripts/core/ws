@@ -133,6 +133,22 @@ cmd_profiles() {
 cmd_start() {
     require_name "${1:-}"
     workspace_exists "$1" || die "Workspace '$1' not found"
+
+    local ws_dir="$WORKSPACES_DIR/$1"
+    local dc_file="$ws_dir/.devcontainer/devcontainer.json"
+
+    if [[ -f "$dc_file" ]] && grep -q "dev-proxy" "$dc_file"; then
+        if ! docker inspect "$PROXY_CONTAINER" &>/dev/null || \
+           [[ "$(docker inspect -f '{{.State.Status}}' "$PROXY_CONTAINER" 2>/dev/null)" != "running" ]]; then
+            warn "Workspace requires proxy but '$PROXY_CONTAINER' is not running"
+            read -p "Start proxy now? [Y/n] " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                proxy_up
+            fi
+        fi
+    fi
+
     info "Starting $1"
     devpod up "$WORKSPACES_DIR/$1"
 }
