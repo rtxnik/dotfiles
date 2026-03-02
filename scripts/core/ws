@@ -37,6 +37,10 @@ Commands:
   ssh <name>             SSH into workspace
   code <name>            Open in VS Code
   detect [path]          Detect profile for a project directory
+  profile <subcmd>       Manage workspace profiles
+    list                 List available profiles (alias: ws profiles)
+    create <name>        Create new profile from template
+    delete <name>        Delete a custom profile
   proxy <subcmd>         Manage transparent proxy container
     up                   Start proxy container
     down                 Stop and remove proxy container
@@ -275,6 +279,146 @@ cmd_detect() {
         echo "No profile detected"
         return 1
     fi
+}
+
+# -----------------------------------------------------------------------------
+# Profile commands
+# -----------------------------------------------------------------------------
+
+readonly BUILTIN_PROFILES="default devops go k8s web proxy rust python"
+
+cmd_profile() {
+    case "${1:-}" in
+        list)    cmd_profiles ;;
+        create)  shift; profile_create "$@" ;;
+        delete)  shift; profile_delete "$@" ;;
+        *)       die "Usage: ws profile [list|create|delete]" ;;
+    esac
+}
+
+profile_create() {
+    local name="${1:-}"
+    [[ -n "$name" ]] || die "Profile name required: ws profile create <name>"
+    [[ "$name" =~ ^[a-z][a-z0-9_-]*$ ]] || die "Invalid profile name (use lowercase, alphanumeric, hyphens, underscores)"
+    profile_exists "$name" && die "Profile '$name' already exists"
+
+    local profile_dir="$PROFILES_DIR/$name"
+
+    info "Creating profile '$name'"
+
+    # Base image
+    echo "Base image:"
+    echo "  1) ubuntu-24.04"
+    echo "  2) ubuntu-22.04"
+    read -p "Select [1]: " -n 1 -r
+    echo
+    local base_image="mcr.microsoft.com/devcontainers/base:ubuntu-24.04"
+    [[ "$REPLY" == "2" ]] && base_image="mcr.microsoft.com/devcontainers/base:ubuntu-22.04"
+
+    # System packages
+    read -p "Extra system packages (space-separated, or empty): " -r
+    local sys_packages="${REPLY:-}"
+
+    # Mise tools
+    read -p "Mise tools (e.g. 'node=lts python=latest', or empty): " -r
+    local mise_tools="${REPLY:-}"
+
+    # Docker-in-docker
+    read -p "Docker-in-docker support? [y/N] " -n 1 -r
+    echo
+    local dind=false
+    [[ $REPLY =~ ^[Yy]$ ]] && dind=true
+
+    mkdir -p "$profile_dir"
+
+    # Generate Dockerfile
+    local apt_packages="ca-certificates curl"
+    [[ -n "$sys_packages" ]] && apt_packages="$apt_packages $sys_packages"
+
+    cat > "$profile_dir/Dockerfile" <<DOCKEREOF
+FROM ${base_image}
+
+RUN apt-get update \\
+    && apt-get install -y --no-install-recommends \\
+       ${apt_packages} \\
+    && rm -rf /var/lib/apt/lists/* \\
+    && curl -fsSL https://mise.jdx.dev/install.sh | sh
+
+ENV PATH="/home/vscode/.local/bin:\${PATH}"
+DOCKEREOF
+
+    # Generate devcontainer.json
+    local dind_feature=""
+    if [[ "$dind" == true ]]; then
+        dind_feature=$(printf ',\n\t\t"ghcr.io/devcontainers/features/docker-in-docker:2": {}')
+    fi
+
+    local display_name
+    display_name="$(tr '[:lower:]' '[:upper:]' <<< "${name:0:1}")${name:1}"
+
+    cat > "$profile_dir/devcontainer.json" <<DCEOF
+{
+	"name": "${display_name}",
+	"build": { "dockerfile": "Dockerfile" },
+	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {
+			"installZsh": true,
+			"configureZshAsDefaultShell": true,
+			"installOhMyZsh": false
+		},
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {}${dind_feature}
+	},
+	"mounts": [],
+	"containerEnv": {
+		"WORKSPACE_PROFILE": "${name}"
+	},
+	"postCreateCommand": "bash .devcontainer/post-create.sh",
+	"remoteUser": "vscode"
+}
+DCEOF
+
+    # Validate JSON
+    if command -v jq &>/dev/null; then
+        if ! jq . "$profile_dir/devcontainer.json" >/dev/null 2>&1; then
+            warn "devcontainer.json validation failed — please check manually"
+        fi
+    fi
+
+    # Generate mise.toml if tools specified
+    if [[ -n "$mise_tools" ]]; then
+        {
+            echo "[tools]"
+            for tool_spec in $mise_tools; do
+                local tool_name="${tool_spec%%=*}"
+                local tool_ver="${tool_spec#*=}"
+                [[ "$tool_ver" == "$tool_name" ]] && tool_ver="latest"
+                echo "${tool_name} = \"${tool_ver}\""
+            done
+        } > "$profile_dir/mise.toml"
+    fi
+
+    success "Profile '$name' created at $profile_dir"
+    echo "Files:"
+    ls -1 "$profile_dir" | sed 's/^/  /'
+}
+
+profile_delete() {
+    local name="${1:-}"
+    [[ -n "$name" ]] || die "Profile name required: ws profile delete <name>"
+
+    for builtin in $BUILTIN_PROFILES; do
+        [[ "$name" == "$builtin" ]] && die "Cannot delete built-in profile '$name'"
+    done
+
+    profile_exists "$name" || die "Profile '$name' not found"
+
+    read -p "Delete profile '$name'? [y/N] " -n 1 -r
+    echo
+    [[ $REPLY =~ ^[Yy]$ ]] || { info "Aborted"; return; }
+
+    rm -rf "$PROFILES_DIR/$name"
+    success "Profile '$name' deleted"
 }
 
 # -----------------------------------------------------------------------------
@@ -923,6 +1067,7 @@ main() {
         delete|rm) shift; cmd_delete "$@" ;;
         ssh)      shift; cmd_ssh "$@" ;;
         code)     shift; cmd_code "$@" ;;
+        profile)  shift; cmd_profile "$@" ;;
         proxy)    shift; cmd_proxy "$@" ;;
         -h|--help|help|"") usage ;;
         -v|--version) echo "ws $VERSION" ;;
