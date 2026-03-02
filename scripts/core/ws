@@ -46,6 +46,7 @@ Commands:
     check                Verify prerequisites
     init                 Generate xray config from VLESS URI
     debug [on|off]       Toggle xray debug logging
+    update [vX.Y.Z]     Update xray to latest or specified version
 
 Environment:
   WORKSPACES_DIR         Storage location (default: ~/workspaces)
@@ -230,7 +231,8 @@ cmd_proxy() {
         check)   proxy_check ;;
         init)    proxy_init ;;
         debug)   shift; proxy_debug "${1:-}" ;;
-        *)       die "Usage: ws proxy [up|down|status|logs|rebuild|test|check|init|debug]" ;;
+        update)  shift; proxy_update "${1:-}" ;;
+        *)       die "Usage: ws proxy [up|down|status|logs|rebuild|test|check|init|debug|update]" ;;
     esac
 }
 
@@ -291,6 +293,59 @@ proxy_rebuild() {
     info "Building proxy image"
     docker build -t "$PROXY_IMAGE" "$PROFILES_DIR/proxy"
     success "Proxy image rebuilt"
+}
+
+proxy_update() {
+    local target_version="${1:-}"
+
+    # Fetch latest version from GitHub API if not specified
+    if [[ -z "$target_version" ]]; then
+        info "Fetching latest xray-core release"
+        target_version=$(curl -sf "https://api.github.com/repos/XTLS/Xray-core/releases/latest" \
+            | grep '"tag_name"' | head -1 | cut -d'"' -f4) \
+            || die "Failed to fetch latest release from GitHub"
+        [[ -n "$target_version" ]] || die "Could not determine latest version"
+        info "Latest version: $target_version"
+    fi
+
+    # Validate version format
+    [[ "$target_version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+        || die "Invalid version format: $target_version (expected vX.Y.Z)"
+
+    # Compare with current version
+    local current_version
+    if docker inspect "$PROXY_CONTAINER" &>/dev/null; then
+        current_version=$(docker exec "$PROXY_CONTAINER" xray version 2>/dev/null \
+            | head -1 | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+    else
+        current_version="unknown"
+    fi
+
+    if [[ "$current_version" == "$target_version" ]]; then
+        success "Already running $target_version — nothing to do"
+        return
+    fi
+
+    info "Updating xray: $current_version -> $target_version"
+
+    # Stop and remove existing container and image
+    docker stop "$PROXY_CONTAINER" 2>/dev/null || true
+    docker rm "$PROXY_CONTAINER" 2>/dev/null || true
+    docker rmi "$PROXY_IMAGE" 2>/dev/null || true
+
+    # Rebuild with target version
+    info "Building proxy image with xray $target_version"
+    docker build --build-arg "XRAY_VERSION=$target_version" \
+        -t "$PROXY_IMAGE" "$PROFILES_DIR/proxy"
+
+    success "Proxy image rebuilt with xray $target_version"
+
+    # Auto-start if config exists
+    if [[ -f "$XRAY_CONFIG" ]]; then
+        proxy_up
+    else
+        info "No xray config found — run 'ws proxy init' then 'ws proxy up'"
+    fi
 }
 
 proxy_test() {
