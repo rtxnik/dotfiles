@@ -1,7 +1,6 @@
 {
 	"name": "Go",
 	"build": { "dockerfile": "Dockerfile" },
-	"runArgs": ["--network=container:dev-proxy"],
 	"features": {
 		"ghcr.io/devcontainers/features/common-utils:2": {
 			"installZsh": true,

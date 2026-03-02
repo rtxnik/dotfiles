@@ -27,7 +27,8 @@ usage() {
 Usage: ws <command> [args]
 
 Commands:
-  new <name> [profile]   Create workspace (profiles: default, devops, go, k8s, web)
+  new <name> [profile] [--proxy]
+                         Create workspace (profiles: default, devops, go, k8s, web)
   list                   List workspaces
   profiles               Show available profiles
   start <name>           Start workspace
@@ -71,8 +72,17 @@ profile_exists() {
 # -----------------------------------------------------------------------------
 
 cmd_new() {
-    local name="${1:-}"
-    local profile="${2:-default}"
+    local proxy_flag=false
+    local positional=()
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --proxy) proxy_flag=true; shift ;;
+            -*)      die "Unknown flag: $1" ;;
+            *)       positional+=("$1"); shift ;;
+        esac
+    done
+    local name="${positional[0]:-}"
+    local profile="${positional[1]:-default}"
 
     require_name "$name"
     workspace_exists "$name" && die "Workspace '$name' already exists"
@@ -91,8 +101,22 @@ cmd_new() {
 
     [[ -f "$profile_dir/mise.toml" ]] && cp "$profile_dir/mise.toml" "$ws_dir/.mise.toml"
 
+    if [[ "$proxy_flag" == true ]]; then
+        inject_proxy_network "$ws_dir/.devcontainer/devcontainer.json"
+        info "Proxy networking enabled"
+    fi
+
     success "Created: $ws_dir"
     echo "Start with: ws start $name"
+}
+
+inject_proxy_network() {
+    local dc_file="$1"
+    grep -q '"runArgs"' "$dc_file" && return
+    local tmp="${dc_file}.tmp"
+    sed '/^[[:space:]]*"build":.*$/a\
+	"runArgs": ["--network=container:dev-proxy"],
+' "$dc_file" > "$tmp" && mv "$tmp" "$dc_file"
 }
 
 cmd_list() {
