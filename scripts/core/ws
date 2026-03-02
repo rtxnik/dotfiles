@@ -28,7 +28,11 @@ fi
 # Helpers
 # -----------------------------------------------------------------------------
 
-die()     { printf "${RED}Error:${RESET} %s\n" "$1" >&2; exit 1; }
+die() {
+    printf "${RED}Error:${RESET} %s\n" "$1" >&2
+    [[ -n "${2:-}" ]] && printf "  %s\n" "$2" >&2
+    exit 1
+}
 info()    { printf "${BLUE}==>${RESET} %s\n" "$1"; }
 success() { printf "${GREEN}✓${RESET} %s\n" "$1"; }
 warn()    { printf "${YELLOW}!${RESET} %s\n" "$1"; }
@@ -38,37 +42,40 @@ usage() {
     cat <<EOF
 Usage: ws <command> [args]
 
-Commands:
-  new <name> [profile] [--proxy]
-                         Create workspace (profiles: default, devops, go, k8s, python, rust, web)
-  list                   List workspaces
-  profiles               Show available profiles
-  start <name>           Start workspace
-  stop <name>            Stop workspace
-  delete <name>          Delete workspace
-  ssh <name>             SSH into workspace
-  code <name>            Open in VS Code
-  detect [path]          Detect profile for a project directory
-  profile <subcmd>       Manage workspace profiles
-    list                 List available profiles (alias: ws profiles)
-    create <name>        Create new profile from template
-    delete <name>        Delete a custom profile
-  proxy <subcmd>         Manage transparent proxy container
-    up                   Start proxy container
-    down                 Stop and remove proxy container
-    status               Show proxy container status
-    logs                 Show proxy container logs
-    rebuild              Force rebuild proxy image
-    test                 Show exit IP (verify proxy works)
-    check                Verify prerequisites
-    init                 Generate xray config from VLESS URI
-    init --add           Add another exit node to existing config
-    debug [on|off]       Toggle xray debug logging
-    update [vX.Y.Z]     Update xray to latest or specified version
+${BOLD}Workspace:${RESET}
+  new <name> [profile]    Create workspace (auto-detects profile)
+  list                    List workspaces
+  start <name>            Start workspace
+  stop <name>             Stop workspace
+  delete <name>           Delete workspace
+  ssh <name>              SSH into workspace
+  code <name>             Open in VS Code
+  detect [path]           Detect profile for a project
 
-Environment:
-  WORKSPACES_DIR         Storage location (default: ~/workspaces)
-  PROFILES_DIR           Profiles location (default: ~/.config/workspaces/profiles)
+${BOLD}Profiles:${RESET}
+  profiles                List available profiles
+  profile create <name>   Create new profile from template
+  profile delete <name>   Delete a custom profile
+
+${BOLD}Proxy:${RESET}
+  proxy up                Start proxy container
+  proxy down              Stop and remove proxy
+  proxy status            Show proxy status and health
+  proxy test              Exit IP, latency, diagnostics
+  proxy check             Verify prerequisites
+  proxy init              Generate config from VLESS URI
+  proxy init --add        Add exit node to existing config
+  proxy debug on|off      Toggle debug logging
+  proxy update [vX.Y.Z]   Update xray version
+
+${BOLD}Examples:${RESET}
+  ws new myproject go --proxy
+  ws new myproject              (auto-detect profile)
+  ws profile create custom
+
+${BOLD}Environment:${RESET}
+  WORKSPACES_DIR    ~/workspaces
+  PROFILES_DIR      ~/.config/workspaces/profiles
 
 Version: $VERSION
 EOF
@@ -152,7 +159,7 @@ cmd_new() {
         fi
     fi
 
-    profile_exists "$profile" || die "Profile '$profile' not found"
+    profile_exists "$profile" || die "Profile '$profile' not found" "Available: ws profiles"
 
     local ws_dir="$WORKSPACES_DIR/$name"
     local profile_dir="$PROFILES_DIR/$profile"
@@ -173,7 +180,10 @@ cmd_new() {
     fi
 
     success "Created: $ws_dir"
-    echo "Start with: ws start $name"
+    echo
+    info "Next steps:"
+    echo "  ws start $name"
+    echo "  ws ssh $name"
 }
 
 inject_proxy_network() {
@@ -270,7 +280,7 @@ cmd_profiles() {
 
 cmd_start() {
     require_name "${1:-}"
-    workspace_exists "$1" || die "Workspace '$1' not found"
+    workspace_exists "$1" || die "Workspace '$1' not found" "List workspaces: ws list"
 
     local ws_dir="$WORKSPACES_DIR/$1"
     local dc_file="$ws_dir/.devcontainer/devcontainer.json"
@@ -324,7 +334,7 @@ cmd_ssh() {
 
 cmd_code() {
     require_name "${1:-}"
-    workspace_exists "$1" || die "Workspace '$1' not found"
+    workspace_exists "$1" || die "Workspace '$1' not found" "List workspaces: ws list"
     devpod up "$WORKSPACES_DIR/$1" --ide vscode
 }
 
@@ -502,7 +512,7 @@ cmd_proxy() {
 }
 
 proxy_up() {
-    [[ -f "$XRAY_CONFIG" ]] || die "Xray config not found: $XRAY_CONFIG (run 'ws proxy init' first)"
+    [[ -f "$XRAY_CONFIG" ]] || die "Xray config not found" "Generate with: ws proxy init"
 
     if docker inspect "$PROXY_CONTAINER" &>/dev/null; then
         local state
@@ -643,7 +653,7 @@ proxy_update() {
 
 proxy_test() {
     if ! docker inspect "$PROXY_CONTAINER" &>/dev/null; then
-        die "Proxy is not running (start with 'ws proxy up')"
+        die "Proxy is not running" "Start with: ws proxy up"
     fi
 
     # Xray version
