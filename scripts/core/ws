@@ -45,6 +45,7 @@ Commands:
     test                 Show exit IP (verify proxy works)
     check                Verify prerequisites
     init                 Generate xray config from VLESS URI
+    debug [on|off]       Toggle xray debug logging
 
 Environment:
   WORKSPACES_DIR         Storage location (default: ~/workspaces)
@@ -228,7 +229,8 @@ cmd_proxy() {
         test)    proxy_test ;;
         check)   proxy_check ;;
         init)    proxy_init ;;
-        *)       die "Usage: ws proxy [up|down|status|logs|rebuild|test|check|init]" ;;
+        debug)   shift; proxy_debug "${1:-}" ;;
+        *)       die "Usage: ws proxy [up|down|status|logs|rebuild|test|check|init|debug]" ;;
     esac
 }
 
@@ -345,6 +347,29 @@ proxy_check() {
     fi
 
     $ok || echo && info "Run 'ws proxy init' to generate config, then 'ws proxy up' to start"
+}
+
+proxy_debug() {
+    local level="${1:-}"
+    case "$level" in
+        on)  level="debug" ;;
+        off) level="warning" ;;
+        *)   die "Usage: ws proxy debug [on|off]" ;;
+    esac
+    [[ -f "$XRAY_CONFIG" ]] || die "Xray config not found (run 'ws proxy init' first)"
+    local tmp="${XRAY_CONFIG}.tmp"
+    if grep -q '"loglevel"' "$XRAY_CONFIG"; then
+        sed 's/"loglevel": *"[^"]*"/"loglevel": "'"$level"'"/' "$XRAY_CONFIG" > "$tmp" \
+            && mv "$tmp" "$XRAY_CONFIG"
+    else
+        sed 's/^{$/{\n    "log": {\n        "loglevel": "'"$level"'"\n    },/' "$XRAY_CONFIG" > "$tmp" \
+            && mv "$tmp" "$XRAY_CONFIG"
+    fi
+    info "Log level set to: $level"
+    if docker inspect "$PROXY_CONTAINER" &>/dev/null; then
+        docker restart "$PROXY_CONTAINER"
+        success "Proxy restarted with log level: $level"
+    fi
 }
 
 # -----------------------------------------------------------------------------
@@ -522,6 +547,9 @@ JSONEOF
 
     cat > "$XRAY_CONFIG" <<CONFIGEOF
 {
+    "log": {
+        "loglevel": "warning"
+    },
     "inbounds": [
         {
             "tag": "transparent",
