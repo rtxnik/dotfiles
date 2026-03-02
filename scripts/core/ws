@@ -36,6 +36,7 @@ Commands:
   delete <name>          Delete workspace
   ssh <name>             SSH into workspace
   code <name>            Open in VS Code
+  detect [path]          Detect profile for a project directory
   proxy <subcmd>         Manage transparent proxy container
     up                   Start proxy container
     down                 Stop and remove proxy container
@@ -70,6 +71,25 @@ profile_exists() {
     [[ -d "$PROFILES_DIR/$1" ]]
 }
 
+detect_profile() {
+    local dir="${1:-.}"
+    if [[ -f "$dir/Cargo.toml" ]]; then
+        echo "rust"
+    elif [[ -f "$dir/go.mod" ]]; then
+        echo "go"
+    elif [[ -f "$dir/pyproject.toml" ]] || [[ -f "$dir/setup.py" ]] \
+         || [[ -f "$dir/requirements.txt" ]] || [[ -f "$dir/Pipfile" ]]; then
+        echo "python"
+    elif [[ -f "$dir/package.json" ]]; then
+        echo "web"
+    elif [[ -f "$dir/helmfile.yaml" ]] || [[ -f "$dir/kustomization.yaml" ]] \
+         || [[ -f "$dir/Chart.yaml" ]]; then
+        echo "k8s"
+    elif [[ -f "$dir/Dockerfile" ]]; then
+        echo "devops"
+    fi
+}
+
 # -----------------------------------------------------------------------------
 # Commands
 # -----------------------------------------------------------------------------
@@ -85,10 +105,37 @@ cmd_new() {
         esac
     done
     local name="${positional[0]:-}"
-    local profile="${positional[1]:-default}"
+    local profile="${positional[1]:-}"
 
     require_name "$name"
     workspace_exists "$name" && die "Workspace '$name' already exists"
+
+    if [[ -z "$profile" ]]; then
+        local detected
+        detected=$(detect_profile)
+        if [[ -n "$detected" ]] && profile_exists "$detected"; then
+            local marker=""
+            case "$detected" in
+                rust)   marker="Cargo.toml" ;;
+                go)     marker="go.mod" ;;
+                python) marker="pyproject.toml/setup.py/requirements.txt" ;;
+                web)    marker="package.json" ;;
+                k8s)    marker="helmfile.yaml/kustomization.yaml/Chart.yaml" ;;
+                devops) marker="Dockerfile" ;;
+            esac
+            info "Detected ${detected} project (${marker} found)"
+            read -p "Use '${detected}' profile? [Y/n] " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                profile="$detected"
+            else
+                profile="default"
+            fi
+        else
+            profile="default"
+        fi
+    fi
+
     profile_exists "$profile" || die "Profile '$profile' not found"
 
     local ws_dir="$WORKSPACES_DIR/$name"
@@ -215,6 +262,19 @@ cmd_code() {
     require_name "${1:-}"
     workspace_exists "$1" || die "Workspace '$1' not found"
     devpod up "$WORKSPACES_DIR/$1" --ide vscode
+}
+
+cmd_detect() {
+    local dir="${1:-.}"
+    [[ -d "$dir" ]] || die "Directory not found: $dir"
+    local detected
+    detected=$(detect_profile "$dir")
+    if [[ -n "$detected" ]]; then
+        echo "$detected"
+    else
+        echo "No profile detected"
+        return 1
+    fi
 }
 
 # -----------------------------------------------------------------------------
@@ -857,6 +917,7 @@ main() {
         new)      shift; cmd_new "$@" ;;
         list|ls)  cmd_list ;;
         profiles) cmd_profiles ;;
+        detect)   shift; cmd_detect "$@" ;;
         start)    shift; cmd_start "$@" ;;
         stop)     shift; cmd_stop "$@" ;;
         delete|rm) shift; cmd_delete "$@" ;;
