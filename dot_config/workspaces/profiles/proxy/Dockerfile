@@ -3,8 +3,10 @@ FROM ubuntu:24.04
 ARG XRAY_VERSION=v24.12.31
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl unzip \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates curl unzip iptables \
     && rm -rf /var/lib/apt/lists/* \
+    && useradd -r -s /usr/sbin/nologin xray \
     && ARCH=$(dpkg --print-architecture) \
     && case "$ARCH" in \
          amd64)  XRAY_ARCH="64" ;; \
@@ -19,6 +21,7 @@ RUN apt-get update \
     && chmod +x /usr/local/bin/xray \
     && rm -rf /tmp/xray /tmp/xray.zip
 
-EXPOSE 10808 10809
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-ENTRYPOINT ["xray", "run", "-c", "/etc/xray/config.json"]
+ENTRYPOINT ["/entrypoint.sh"]
