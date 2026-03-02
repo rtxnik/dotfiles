@@ -692,7 +692,7 @@ JSONEOF
     ],
     "outbounds": [
         {
-            "tag": "proxy",
+            "tag": "proxy-1",
             "protocol": "vless",
             "settings": {
                 "vnext": [
@@ -722,6 +722,15 @@ JSONEOF
     ],
     "routing": {
         "domainStrategy": "IPIfNonMatch",
+        "balancers": [
+            {
+                "tag": "proxy-balancer",
+                "selector": ["proxy-"],
+                "strategy": {
+                    "type": "roundRobin"
+                }
+            }
+        ],
         "rules": [
             {
                 "type": "field",
@@ -732,6 +741,11 @@ JSONEOF
                     "127.0.0.0/8"
                 ],
                 "outboundTag": "direct"
+            },
+            {
+                "type": "field",
+                "network": "tcp,udp",
+                "balancerTag": "proxy-balancer"
             }
         ]
     }

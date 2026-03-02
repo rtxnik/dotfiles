@@ -19,7 +19,7 @@
   ],
   "outbounds": [
     {
-      "tag": "proxy",
+      "tag": "proxy-1",
       "protocol": "vless",
       "settings": {
         "vnext": [
@@ -56,6 +56,15 @@
   ],
   "routing": {
     "domainStrategy": "IPIfNonMatch",
+    "balancers": [
+      {
+        "tag": "proxy-balancer",
+        "selector": ["proxy-"],
+        "strategy": {
+          "type": "roundRobin"
+        }
+      }
+    ],
     "rules": [
       {
         "type": "field",
@@ -66,6 +75,11 @@
           "127.0.0.0/8"
         ],
         "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "network": "tcp,udp",
+        "balancerTag": "proxy-balancer"
       }
     ]
   },
