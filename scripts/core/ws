@@ -298,10 +298,80 @@ proxy_test() {
         die "Proxy is not running (start with 'ws proxy up')"
     fi
 
+    # Xray version
+    local version
+    version=$(docker exec "$PROXY_CONTAINER" xray version 2>/dev/null | head -1 || echo "unknown")
+    echo "  Xray:    $version"
+
+    # Container uptime
+    local started_at uptime_str
+    started_at=$(docker inspect -f '{{.State.StartedAt}}' "$PROXY_CONTAINER" 2>/dev/null || echo "")
+    if [[ -n "$started_at" ]]; then
+        local start_epoch now_epoch diff_sec
+        start_epoch=$(date -jf "%Y-%m-%dT%H:%M:%S" "${started_at%%.*}" "+%s" 2>/dev/null || \
+                      date -d "${started_at%%.*}" "+%s" 2>/dev/null || echo "")
+        if [[ -n "$start_epoch" ]]; then
+            now_epoch=$(date "+%s")
+            diff_sec=$((now_epoch - start_epoch))
+            local hours=$((diff_sec / 3600))
+            local mins=$(( (diff_sec % 3600) / 60 ))
+            uptime_str="${hours}h ${mins}m"
+        else
+            uptime_str="unknown"
+        fi
+    else
+        uptime_str="unknown"
+    fi
+    echo "  Uptime:  $uptime_str"
+
+    # Health status
+    local health
+    health=$(docker inspect -f '{{.State.Health.Status}}' "$PROXY_CONTAINER" 2>/dev/null || echo "none")
+    echo "  Health:  $health"
+
+    # Exit IP with latency
     info "Checking exit IP via proxy"
-    docker exec "$PROXY_CONTAINER" \
-        curl -sf --max-time 10 https://ifconfig.me || die "Failed to reach ifconfig.me"
-    echo
+    local start_time end_time exit_ip latency
+    start_time=$(perl -MTime::HiRes=time -e 'printf "%.3f", time')
+    if exit_ip=$(docker exec "$PROXY_CONTAINER" curl -sf --max-time 10 https://ifconfig.me 2>/dev/null); then
+        end_time=$(perl -MTime::HiRes=time -e 'printf "%.3f", time')
+        latency=$(perl -e "printf '%.0f', ($end_time - $start_time) * 1000")
+        success "Exit IP: $exit_ip (${latency}ms)"
+    else
+        warn "Failed to reach ifconfig.me"
+        echo
+        info "Diagnostics:"
+
+        # Check if xray is listening
+        if docker exec "$PROXY_CONTAINER" sh -c 'ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null' | grep -q ":12345"; then
+            echo "  [ok] Xray listening on port 12345"
+        else
+            echo "  [!!] Xray NOT listening on port 12345"
+        fi
+
+        # Check DNS resolution
+        if docker exec "$PROXY_CONTAINER" sh -c 'getent hosts ifconfig.me' &>/dev/null; then
+            echo "  [ok] DNS resolution works"
+        else
+            echo "  [!!] DNS resolution failed"
+        fi
+
+        # Check iptables rules
+        local rule_count
+        rule_count=$(docker exec "$PROXY_CONTAINER" iptables -t nat -L PREROUTING -n 2>/dev/null | grep -c "12345" || echo "0")
+        if [[ "$rule_count" -gt 0 ]]; then
+            echo "  [ok] iptables NAT rules present ($rule_count rules)"
+        else
+            echo "  [!!] iptables NAT rules missing"
+        fi
+
+        echo
+        info "Suggested actions:"
+        echo "  1. Check logs: ws proxy logs"
+        echo "  2. Enable debug: ws proxy debug on"
+        echo "  3. Rebuild: ws proxy rebuild && ws proxy up"
+        exit 1
+    fi
 }
 
 proxy_check() {
