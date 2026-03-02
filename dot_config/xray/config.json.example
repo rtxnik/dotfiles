@@ -1,0 +1,66 @@
+{
+    "inbounds": [
+        {
+            "tag": "transparent",
+            "port": 12345,
+            "protocol": "dokodemo-door",
+            "settings": {
+                "network": "tcp",
+                "followRedirect": true
+            },
+            "sniffing": {
+                "enabled": true,
+                "destOverride": ["http", "tls", "quic"]
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "tag": "proxy",
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "YOUR_SERVER",
+                        "port": 443,
+                        "users": [
+                            {
+                                "id": "YOUR_UUID",
+                                "encryption": "none",
+                                "flow": ""
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "network": "YOUR_TRANSPORT",
+                "security": "reality",
+                "realitySettings": {
+                    "serverName": "YOUR_SNI",
+                    "fingerprint": "chrome",
+                    "publicKey": "YOUR_PUBLIC_KEY",
+                    "shortId": "YOUR_SHORT_ID",
+                    "spiderX": ""
+                }
+            }
+        },
+        {
+            "tag": "direct",
+            "protocol": "freedom",
+            "settings": {}
+        }
+    ],
+    "routing": {
+        "domainStrategy": "IPIfNonMatch",
+        "rules": [
+            {
+                "type": "field",
+                "ip": [
+                    "geoip:private"
+                ],
+                "outboundTag": "direct"
+            }
+        ]
+    }
+}
