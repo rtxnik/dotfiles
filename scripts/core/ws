@@ -8,6 +8,7 @@ set -euo pipefail
 readonly VERSION="1.2.0"
 readonly WORKSPACES_DIR="${WORKSPACES_DIR:-$HOME/workspaces}"
 readonly PROFILES_DIR="${PROFILES_DIR:-$HOME/.config/workspaces/profiles}"
+readonly SHARED_DIR="${SHARED_DIR:-$HOME/.config/workspaces/shared}"
 readonly PROXY_CONTAINER="dev-proxy"
 readonly PROXY_IMAGE="devpod-proxy"
 readonly XRAY_CONFIG="$HOME/.config/xray/config.json"
@@ -85,7 +86,7 @@ cmd_new() {
     mkdir -p "$ws_dir/.devcontainer"
     cp "$profile_dir/devcontainer.json" "$ws_dir/.devcontainer/"
     cp "$profile_dir/Dockerfile" "$ws_dir/.devcontainer/"
-    cp "$profile_dir/post-create.sh" "$ws_dir/.devcontainer/"
+    cp "$SHARED_DIR/post-create.sh" "$ws_dir/.devcontainer/"
     chmod +x "$ws_dir/.devcontainer/post-create.sh"
 
     [[ -f "$profile_dir/mise.toml" ]] && cp "$profile_dir/mise.toml" "$ws_dir/.mise.toml"
