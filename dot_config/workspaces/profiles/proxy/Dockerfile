@@ -1,6 +1,6 @@
 FROM ubuntu:24.04
 
-ARG XRAY_VERSION=v24.12.31
+ARG XRAY_VERSION=v26.2.6
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
