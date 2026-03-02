@@ -174,7 +174,14 @@ cmd_delete() {
 
 cmd_ssh() {
     require_name "${1:-}"
-    devpod ssh "$1"
+
+    if [[ -n "${TMUX:-}" ]]; then
+        tmux rename-window "$1"
+        devpod ssh "$1"
+        tmux set-window-option automatic-rename on
+    else
+        devpod ssh "$1"
+    fi
 }
 
 cmd_code() {
