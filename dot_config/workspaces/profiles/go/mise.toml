@@ -1,0 +1,12 @@
+[settings.node]
+gpg_verify = false
+
+[tools]
+go = "latest"
+golangci-lint = "latest"
+node = "lts"
+jq = "latest"
+yq = "latest"
+fzf = "latest"
+ripgrep = "latest"
+fd = "latest"

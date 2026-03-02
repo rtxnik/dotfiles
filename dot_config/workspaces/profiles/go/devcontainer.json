@@ -1,0 +1,24 @@
+{
+	"name": "Go",
+	"build": { "dockerfile": "Dockerfile" },
+	"runArgs": ["--network=devnet"],
+	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {
+			"installZsh": true,
+			"configureZshAsDefaultShell": true,
+			"installOhMyZsh": false
+		},
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
+	"mounts": [],
+	"containerEnv": {
+		"WORKSPACE_PROFILE": "go",
+		"HTTP_PROXY": "http://dev-proxy:10809",
+		"HTTPS_PROXY": "http://dev-proxy:10809",
+		"ALL_PROXY": "socks5://dev-proxy:10808",
+		"NO_PROXY": "localhost,127.0.0.1"
+	},
+	"postCreateCommand": "bash .devcontainer/post-create.sh",
+	"remoteUser": "vscode"
+}
