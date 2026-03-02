@@ -14,13 +14,25 @@ readonly PROXY_IMAGE="devpod-proxy"
 readonly XRAY_CONFIG="$HOME/.config/xray/config.json"
 
 # -----------------------------------------------------------------------------
+# Colors (TTY-aware)
+# -----------------------------------------------------------------------------
+
+if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]] && [[ "${TERM:-}" != "dumb" ]]; then
+    RED='\033[31m' GREEN='\033[32m' YELLOW='\033[33m' BLUE='\033[34m'
+    DIM='\033[2m' BOLD='\033[1m' RESET='\033[0m'
+else
+    RED='' GREEN='' YELLOW='' BLUE='' DIM='' BOLD='' RESET=''
+fi
+
+# -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
 
-die() { printf '\033[31mError:\033[0m %s\n' "$1" >&2; exit 1; }
-info() { printf '\033[34m==>\033[0m %s\n' "$1"; }
-success() { printf '\033[32m✓\033[0m %s\n' "$1"; }
-warn() { printf '\033[33m!\033[0m %s\n' "$1"; }
+die()     { printf "${RED}Error:${RESET} %s\n" "$1" >&2; exit 1; }
+info()    { printf "${BLUE}==>${RESET} %s\n" "$1"; }
+success() { printf "${GREEN}✓${RESET} %s\n" "$1"; }
+warn()    { printf "${YELLOW}!${RESET} %s\n" "$1"; }
+detail()  { printf "  ${DIM}%s${RESET} %s\n" "$1" "$2"; }
 
 usage() {
     cat <<EOF
