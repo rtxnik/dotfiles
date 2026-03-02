@@ -18,8 +18,8 @@ readonly XRAY_CONFIG="$HOME/.config/xray/config.json"
 # -----------------------------------------------------------------------------
 
 if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]] && [[ "${TERM:-}" != "dumb" ]]; then
-    RED='\033[31m' GREEN='\033[32m' YELLOW='\033[33m' BLUE='\033[34m'
-    DIM='\033[2m' BOLD='\033[1m' RESET='\033[0m'
+    RED=$'\033[31m' GREEN=$'\033[32m' YELLOW=$'\033[33m' BLUE=$'\033[34m'
+    DIM=$'\033[2m' BOLD=$'\033[1m' RESET=$'\033[0m'
 else
     RED='' GREEN='' YELLOW='' BLUE='' DIM='' BOLD='' RESET=''
 fi
@@ -270,7 +270,7 @@ cmd_profiles() {
         local tools="-"
         if [[ -f "$dir/mise.toml" ]]; then
             local tool_list
-            tool_list=$(grep -E '^[a-z]' "$dir/mise.toml" | cut -d= -f1 | tr -d ' ' | paste -sd', ')
+            tool_list=$(grep -E '^[a-z]' "$dir/mise.toml" | cut -d= -f1 | tr -d ' ' | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g')
             [[ -n "$tool_list" ]] && tools="$tool_list"
         fi
 
@@ -557,16 +557,22 @@ proxy_status() {
         health=$(docker inspect -f '{{.State.Health.Status}}' "$PROXY_CONTAINER" 2>/dev/null || echo "none")
         image=$(docker inspect -f '{{.Config.Image}}' "$PROXY_CONTAINER" 2>/dev/null || echo "unknown")
 
+        local status_display="$status" health_display="$health"
         local status_icon="${RED}○${RESET}" health_icon="${RED}○${RESET}"
-        [[ "$status" == "running" ]] && status_icon="${GREEN}●${RESET}"
-        [[ "$health" == "healthy" ]] && health_icon="${GREEN}●${RESET}"
+        if [[ "$status" == "running" ]]; then
+            status_icon="${GREEN}●${RESET}"; status_display="Running"
+        fi
+        if [[ "$health" == "healthy" ]]; then
+            health_icon="${GREEN}●${RESET}"; health_display="Healthy"
+        fi
 
         local uptime_str="unknown"
         local started_at
         started_at=$(docker inspect -f '{{.State.StartedAt}}' "$PROXY_CONTAINER" 2>/dev/null || echo "")
         if [[ -n "$started_at" ]]; then
             local start_epoch now_epoch
-            start_epoch=$(date -d "${started_at%%.*}" "+%s" 2>/dev/null || echo "")
+            start_epoch=$(date -jf "%Y-%m-%dT%H:%M:%S" "${started_at%%.*}" "+%s" 2>/dev/null || \
+                          date -d "${started_at%%.*}" "+%s" 2>/dev/null || echo "")
             if [[ -n "$start_epoch" ]]; then
                 now_epoch=$(date "+%s")
                 local diff_sec=$((now_epoch - start_epoch))
@@ -574,8 +580,8 @@ proxy_status() {
             fi
         fi
 
-        printf "  Container:  ${status_icon} %s\n" "${status^}"
-        printf "  Health:     ${health_icon} %s\n" "${health^}"
+        printf "  Container:  ${status_icon} %s\n" "$status_display"
+        printf "  Health:     ${health_icon} %s\n" "$health_display"
         detail "Uptime:" "$uptime_str"
         detail "Image:" "$image"
     else
