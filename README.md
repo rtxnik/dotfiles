@@ -42,11 +42,13 @@ and an optional transparent VLESS proxy.
 
 ```bash
 ws new myproject go --proxy   # create workspace with proxy networking
+ws new myproject              # auto-detect profile from project files
+ws profile create custom      # generate a new profile interactively
 ws start myproject
 ws ssh myproject
 ```
 
-Profiles: `default`, `devops`, `go`, `k8s`, `web`.
+Profiles: `default`, `devops`, `go`, `k8s`, `python`, `rust`, `web`.
 See [workspaces/README.md](dot_config/workspaces/README.md) for full
 command reference, proxy setup, and profile creation guide.
 

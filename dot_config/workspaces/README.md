@@ -22,9 +22,42 @@ ws delete myproject           # delete
 | `devops` | opentofu, ansible, k9s + network utilities |
 | `go` | go, golangci-lint, node (lts), jq, yq, fzf, ripgrep, fd |
 | `k8s` | kubectl, helm, k9s, kind, stern, flux, argocd |
+| `python` | python, uv, ruff, jq, yq, fzf, ripgrep, fd |
+| `rust` | rust, cargo-binstall, jq, yq, fzf, ripgrep, fd |
 | `web` | node (lts), bun, deno, pnpm |
 
-## Creating a New Profile
+## Auto-detect
+
+When creating a workspace without specifying a profile, `ws new` scans
+the current directory for project markers and suggests a matching profile:
+
+```bash
+ws new myproject              # auto-detects profile from cwd
+ws detect ~/projects/myapp    # check which profile would be detected
+```
+
+| Marker file | Detected profile |
+|-------------|-----------------|
+| `Cargo.toml` | rust |
+| `go.mod` | go |
+| `pyproject.toml`, `setup.py`, `requirements.txt`, `Pipfile` | python |
+| `package.json` | web |
+| `helmfile.yaml`, `kustomization.yaml`, `Chart.yaml` | k8s |
+| `Dockerfile` (no language markers) | devops |
+
+## Profile Management
+
+```bash
+ws profile list               # list available profiles
+ws profile create myprofile   # interactive profile generator
+ws profile delete myprofile   # delete a custom profile
+```
+
+The `create` command walks through base image selection, system packages,
+mise tools, and Docker-in-docker support. Built-in profiles cannot be
+deleted.
+
+## Creating a New Profile (manual)
 
 Each profile lives in `profiles/<name>/` with these files:
 
