@@ -1,7 +1,7 @@
 {
 	"name": "Go",
 	"build": { "dockerfile": "Dockerfile" },
-	"runArgs": ["--network=devnet"],
+	"runArgs": ["--network=container:dev-proxy"],
 	"features": {
 		"ghcr.io/devcontainers/features/common-utils:2": {
 			"installZsh": true,
@@ -13,11 +13,7 @@
 	},
 	"mounts": [],
 	"containerEnv": {
-		"WORKSPACE_PROFILE": "go",
-		"HTTP_PROXY": "http://dev-proxy:10809",
-		"HTTPS_PROXY": "http://dev-proxy:10809",
-		"ALL_PROXY": "socks5://dev-proxy:10808",
-		"NO_PROXY": "localhost,127.0.0.1"
+		"WORKSPACE_PROFILE": "go"
 	},
 	"postCreateCommand": "bash .devcontainer/post-create.sh",
 	"remoteUser": "vscode"
