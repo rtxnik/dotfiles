@@ -407,6 +407,36 @@ JSONEOF
                 )
             fi
             ;;
+        h2)
+            stream_network_settings=$(cat <<JSONEOF
+,
+                "httpSettings": {
+                    "host": ["${host:-$sni}"],
+                    "path": "${path:-/}"
+                }
+JSONEOF
+            )
+            ;;
+        httpupgrade)
+            stream_network_settings=$(cat <<JSONEOF
+,
+                "httpupgradeSettings": {
+                    "path": "${path:-/}",
+                    "host": "${host:-$sni}"
+                }
+JSONEOF
+            )
+            ;;
+        xhttp|splithttp)
+            stream_network_settings=$(cat <<JSONEOF
+,
+                "xhttpSettings": {
+                    "path": "${path:-/}",
+                    "mode": "${mode:-auto}"
+                }
+JSONEOF
+            )
+            ;;
     esac
 
     local security_settings=""
@@ -492,7 +522,10 @@ JSONEOF
             {
                 "type": "field",
                 "ip": [
-                    "geoip:private"
+                    "10.0.0.0/8",
+                    "172.16.0.0/12",
+                    "192.168.0.0/16",
+                    "127.0.0.0/8"
                 ],
                 "outboundTag": "direct"
             }
