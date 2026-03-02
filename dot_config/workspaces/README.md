@@ -5,12 +5,13 @@ Devcontainer profiles for [devpod](https://devpod.sh/).
 ## Usage
 
 ```bash
-ws new myproject k8s    # Create workspace
-ws start myproject      # Start
-ws ssh myproject        # SSH into
-ws code myproject       # Open in VS Code
-ws stop myproject       # Stop
-ws delete myproject     # Delete
+ws new myproject k8s          # create workspace
+ws new myproject go --proxy   # create workspace with proxy networking
+ws start myproject            # start
+ws ssh myproject              # SSH into (renames tmux window)
+ws code myproject             # open in VS Code
+ws stop myproject             # stop
+ws delete myproject           # delete
 ```
 
 ## Profiles
@@ -23,37 +24,128 @@ ws delete myproject     # Delete
 | `k8s` | kubectl, helm, k9s, kind, stern, flux, argocd |
 | `web` | node (lts), bun, deno, pnpm |
 
+## Creating a New Profile
+
+Each profile lives in `profiles/<name>/` with these files:
+
+```
+profiles/myprofile/
+├── devcontainer.json   # required — container config
+├── Dockerfile          # required — base image + system packages
+└── mise.toml           # optional — tool versions for this profile
+```
+
+### Step 1: Create directory
+
+```bash
+mkdir -p profiles/myprofile
+```
+
+### Step 2: Create `devcontainer.json`
+
+```jsonc
+{
+	"name": "MyProfile",
+	"build": { "dockerfile": "Dockerfile" },
+	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {
+			"installZsh": true,
+			"configureZshAsDefaultShell": true,
+			"installOhMyZsh": false
+		},
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
+	"mounts": [],
+	"containerEnv": { "WORKSPACE_PROFILE": "myprofile" },
+	"postCreateCommand": "bash .devcontainer/post-create.sh",
+	"remoteUser": "vscode"
+}
+```
+
+The `WORKSPACE_PROFILE` env var identifies the profile in `ws list` output.
+
+### Step 3: Create `Dockerfile`
+
+```dockerfile
+FROM mcr.microsoft.com/devcontainers/base:ubuntu-22.04
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL https://mise.jdx.dev/install.sh | sh
+
+ENV PATH="/home/vscode/.local/bin:${PATH}"
+```
+
+Add any system-level packages your profile needs to the `apt-get install` line.
+
+### Step 4: Add tools via `mise.toml` (optional)
+
+```toml
+[tools]
+node = "lts"
+python = "latest"
+```
+
+Tools listed here are merged with the global mise config by
+`shared/post-create.sh` during first startup. Use `latest` unless a
+specific version is required.
+
+### Customization examples
+
+**Add extra devcontainer features:**
+
+```jsonc
+"features": {
+	// ... common-utils, git, github-cli ...
+	"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+}
+```
+
+**Mount host directories:**
+
+```jsonc
+"mounts": [
+	"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly"
+]
+```
+
 ## Transparent Proxy
 
-Dev containers route all TCP traffic through a VLESS proxy via iptables NAT
-rules. No application-level configuration (env vars) is needed — traffic
+Dev containers can route all TCP traffic through a VLESS proxy via iptables
+NAT rules. No application-level configuration (env vars) is needed — traffic
 interception is fully transparent at the network level.
+
+Use `--proxy` when creating a workspace to opt in:
+
+```bash
+ws new myproject go --proxy
+```
 
 ### Architecture
 
 ```
-┌──────────────────────────────────────────┐
-│        Shared network namespace          │
-│                                          │
-│  ┌────────────────┐                      │
-│  │  dev-proxy     │                      │
-│  │  xray-core     │ ← dokodemo-door      │
-│  │  iptables NAT  │   port 12345         │
-│  │                │                      │
-│  │  All OUTPUT    │                      │
-│  │  TCP traffic   │──→ REDIRECT :12345   │
-│  │  (except xray  │──→ xray ──→ VLESS    │
-│  │   user + LAN)  │                      │
-│  └────────────────┘                      │
-│         ▲                                │
-│         │ --network=container:dev-proxy   │
-│  ┌──────┴───────┐  ┌───────────────┐    │
-│  │  devpod-1    │  │  devpod-2     │    │
-│  │              │  │               │    │
-│  │  ALL traffic │  │  ALL traffic  │    │
-│  │  via VLESS   │  │  via VLESS    │    │
-│  └──────────────┘  └───────────────┘    │
-└──────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│       Shared network namespace          │
+│                                         │
+│  ┌────────────────┐                     │
+│  │  dev-proxy     │                     │
+│  │  xray-core     │ ← dokodemo-door    │
+│  │  iptables NAT  │   port 12345       │
+│  │                │                     │
+│  │  OUTPUT TCP ───┼──→ REDIRECT :12345  │
+│  │  (skip xray    │──→ xray ──→ VLESS   │
+│  │   user + LAN)  │        relay server │
+│  └────────────────┘                     │
+│         ▲                               │
+│         │ --network=container:dev-proxy  │
+│  ┌──────┴───────┐  ┌───────────────┐   │
+│  │  workspace-1 │  │  workspace-2  │   │
+│  │  all TCP via  │  │  all TCP via  │   │
+│  │  proxy relay  │  │  proxy relay  │   │
+│  └──────────────┘  └───────────────┘   │
+└─────────────────────────────────────────┘
 ```
 
 ### How it works
@@ -67,11 +159,11 @@ interception is fully transparent at the network level.
 ### Quick start
 
 ```bash
-ws proxy init           # generate config from VLESS URI
-ws proxy check          # verify prerequisites
-ws proxy up             # start proxy container
-ws proxy test           # show exit IP
-ws new myproject go     # create workspace
+ws proxy init              # generate config from VLESS URI
+ws proxy check             # verify prerequisites
+ws proxy up                # start proxy container
+ws proxy test              # exit IP, latency, diagnostics
+ws new myproject go --proxy
 ws start myproject
 ws ssh myproject
 # Inside: curl https://ifconfig.me → proxy exit IP
@@ -85,10 +177,12 @@ ws ssh myproject
 | `ws proxy check` | Verify prerequisites (docker, config, image, container) |
 | `ws proxy up` | Start proxy container |
 | `ws proxy down` | Stop and remove proxy container |
-| `ws proxy status` | Show container status |
-| `ws proxy logs` | Show recent logs |
+| `ws proxy status` | Show container status and health |
+| `ws proxy logs` | Show recent container logs |
 | `ws proxy rebuild` | Force rebuild proxy image |
-| `ws proxy test` | Show exit IP (verify proxy works) |
+| `ws proxy test` | Exit IP, latency, xray version, diagnostics on failure |
+| `ws proxy debug on\|off` | Toggle xray debug logging (restarts container) |
+| `ws proxy update [vX.Y.Z]` | Update xray to latest or pinned version |
 
 ### Config
 
@@ -98,7 +192,7 @@ VLESS URI, or copy `config.json.example` and fill in your values.
 
 ## Requirements
 
-- devpod
+- [devpod](https://devpod.sh/)
 - Docker or compatible runtime
 - SSH key for GitHub
-- VLESS URI or `~/.config/xray/config.json` for proxy profiles
+- VLESS URI or `~/.config/xray/config.json` for proxy networking
