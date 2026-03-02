@@ -27,6 +27,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply git@github.com:rtxnik/dotfi
 │   ├── alacritty/      # Terminal emulator
 │   ├── mise/           # Tool versions
 │   ├── nvim/           # Neovim (LazyVim)
+│   ├── xray/           # Proxy config example
 │   └── workspaces/     # Devcontainer profiles
 ├── scripts/
 │   ├── core/           # Essential utilities
@@ -44,14 +45,16 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply git@github.com:rtxnik/dotfi
 | `k8s` | kubectl, helm, kind, flux, argocd |
 | `web` | node, bun, deno, pnpm |
 
-The `go` profile routes traffic through an isolated Docker proxy network.
-Start the proxy first:
+Dev containers route all TCP traffic through a transparent VLESS proxy
+(iptables NAT). No env vars needed — traffic interception is automatic.
 
 ```bash
-ws proxy up              # start dev-proxy container on devnet
-ws new myproject go      # create Go workspace (connects to devnet)
+ws proxy init            # generate config from VLESS URI
+ws proxy up              # start transparent proxy container
+ws new myproject go      # create Go workspace (shared network namespace)
 ws start myproject
 ws ssh myproject
+# Inside: curl https://ifconfig.me → proxy exit IP
 ```
 
 ## Requirements
