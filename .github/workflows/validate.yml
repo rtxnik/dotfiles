@@ -24,13 +24,13 @@ jobs:
               echo "FAIL: $f"
               fail=1
             fi
-          done < <(find . \( -name '*.sh' -o -name 'ws' -o -name 'setup' \) | grep -v node_modules)
+          done < <(find . -type f \( -name '*.sh' -o -path '*/scripts/*' -o -name 'setup' \) | grep -v node_modules)
           exit $fail
 
       - name: shellcheck (advisory)
         continue-on-error: true
         run: |
-          find . \( -name '*.sh' -o -name 'ws' -o -name 'setup' \) | grep -v node_modules | \
+          find . -type f \( -name '*.sh' -o -path '*/scripts/*' -o -name 'setup' \) | grep -v node_modules | \
             xargs shellcheck --severity=warning || true
 
   chezmoi:

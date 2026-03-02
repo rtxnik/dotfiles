@@ -169,7 +169,7 @@ inject_proxy_network() {
     grep -q '"runArgs"' "$dc_file" && return
     local tmp="${dc_file}.tmp"
     sed '/^[[:space:]]*"build":.*$/a\
-	"runArgs": ["--network=container:dev-proxy"],
+	"runArgs": ["--network=container:'"$PROXY_CONTAINER"'"],
 ' "$dc_file" > "$tmp" && mv "$tmp" "$dc_file"
 }
 
@@ -445,9 +445,15 @@ proxy_up() {
     [[ -f "$XRAY_CONFIG" ]] || die "Xray config not found: $XRAY_CONFIG (run 'ws proxy init' first)"
 
     if docker inspect "$PROXY_CONTAINER" &>/dev/null; then
-        success "Proxy already running"
-        proxy_status
-        return
+        local state
+        state=$(docker inspect -f '{{.State.Status}}' "$PROXY_CONTAINER")
+        if [[ "$state" == "running" ]]; then
+            success "Proxy already running"
+            proxy_status
+            return
+        fi
+        info "Removing stopped proxy container"
+        docker rm "$PROXY_CONTAINER" &>/dev/null || true
     fi
 
     if ! docker image inspect "$PROXY_IMAGE" &>/dev/null; then
