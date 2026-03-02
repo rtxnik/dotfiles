@@ -46,7 +46,7 @@ ws start myproject
 ws ssh myproject
 ```
 
-Profiles: `default`, `devops`, `go`, `k8s`, `web`.
+Profiles: `default`, `devops`, `go`, `k8s`, `python`, `rust`, `web`.
 See [workspaces/README.md](dot_config/workspaces/README.md) for full
 command reference, proxy setup, and profile creation guide.
 

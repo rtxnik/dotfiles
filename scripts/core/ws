@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-readonly VERSION="1.2.0"
+readonly VERSION="1.3.0-rc1"
 readonly WORKSPACES_DIR="${WORKSPACES_DIR:-$HOME/workspaces}"
 readonly PROFILES_DIR="${PROFILES_DIR:-$HOME/.config/workspaces/profiles}"
 readonly SHARED_DIR="${SHARED_DIR:-$HOME/.config/workspaces/shared}"
@@ -28,7 +28,7 @@ Usage: ws <command> [args]
 
 Commands:
   new <name> [profile] [--proxy]
-                         Create workspace (profiles: default, devops, go, k8s, web)
+                         Create workspace (profiles: default, devops, go, k8s, python, rust, web)
   list                   List workspaces
   profiles               Show available profiles
   start <name>           Start workspace

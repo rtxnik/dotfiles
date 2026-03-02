@@ -1,0 +1,9 @@
+[tools]
+python = "latest"
+uv = "latest"
+ruff = "latest"
+jq = "latest"
+yq = "latest"
+fzf = "latest"
+ripgrep = "latest"
+fd = "latest"

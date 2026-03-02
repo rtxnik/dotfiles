@@ -22,6 +22,8 @@ ws delete myproject           # delete
 | `devops` | opentofu, ansible, k9s + network utilities |
 | `go` | go, golangci-lint, node (lts), jq, yq, fzf, ripgrep, fd |
 | `k8s` | kubectl, helm, k9s, kind, stern, flux, argocd |
+| `python` | python, uv, ruff, jq, yq, fzf, ripgrep, fd |
+| `rust` | rust, cargo-binstall, jq, yq, fzf, ripgrep, fd |
 | `web` | node (lts), bun, deno, pnpm |
 
 ## Creating a New Profile
