@@ -45,6 +45,7 @@ Commands:
     test                 Show exit IP (verify proxy works)
     check                Verify prerequisites
     init                 Generate xray config from VLESS URI
+    init --add           Add another exit node to existing config
     debug [on|off]       Toggle xray debug logging
     update [vX.Y.Z]     Update xray to latest or specified version
 
@@ -229,7 +230,7 @@ cmd_proxy() {
         rebuild) proxy_rebuild ;;
         test)    proxy_test ;;
         check)   proxy_check ;;
-        init)    proxy_init ;;
+        init)    shift; proxy_init "$@" ;;
         debug)   shift; proxy_debug "${1:-}" ;;
         update)  shift; proxy_update "${1:-}" ;;
         *)       die "Usage: ws proxy [up|down|status|logs|rebuild|test|check|init|debug|update]" ;;
@@ -502,10 +503,20 @@ proxy_debug() {
 # -----------------------------------------------------------------------------
 
 proxy_init() {
-    if [[ -f "$XRAY_CONFIG" ]]; then
-        read -p "Config already exists at $XRAY_CONFIG. Overwrite? [y/N] " -n 1 -r
-        echo
-        [[ $REPLY =~ ^[Yy]$ ]] || { info "Aborted"; return; }
+    local add_mode=false
+    if [[ "${1:-}" == "--add" ]]; then
+        add_mode=true
+    fi
+
+    if [[ "$add_mode" == true ]]; then
+        [[ -f "$XRAY_CONFIG" ]] || die "No config found (run 'ws proxy init' first)"
+        command -v node &>/dev/null || die "node is required for --add mode (install via mise)"
+    else
+        if [[ -f "$XRAY_CONFIG" ]]; then
+            read -p "Config already exists at $XRAY_CONFIG. Overwrite? [y/N] " -n 1 -r
+            echo
+            [[ $REPLY =~ ^[Yy]$ ]] || { info "Aborted"; return; }
+        fi
     fi
 
     echo "Enter your VLESS URI (vless://...):"
@@ -517,6 +528,11 @@ proxy_init() {
     # Format: vless://UUID@ADDRESS:PORT?params#REMARK
 
     local without_scheme="${vless_uri#vless://}"
+    local remark=""
+    if [[ "$without_scheme" == *"#"* ]]; then
+        remark="${without_scheme##*#}"
+        remark=$(printf '%s' "$remark" | sed 's/%20/ /g; s/%2B/+/g; s/%23/#/g')
+    fi
     local main_part="${without_scheme%%#*}"
     local userinfo="${main_part%%@*}"
     local hostport_params="${main_part#*@}"
@@ -556,6 +572,7 @@ proxy_init() {
     fp="${fp:-chrome}"
 
     info "Parsed VLESS config:"
+    [[ -n "$remark" ]] && echo "  Remark:     $remark"
     echo "  Address:    $address"
     echo "  Port:       $port"
     echo "  UUID:       ${uuid:0:8}..."
@@ -667,7 +684,24 @@ JSONEOF
             ;;
     esac
 
-    # --- Generate config ---
+    # --- Generate or update config ---
+
+    if [[ "$add_mode" == true ]]; then
+        _proxy_init_add "$address" "$port" "$uuid" "$encryption" \
+            "$network" "$security" "$remark" \
+            "$security_settings" "$stream_network_settings"
+    else
+        _proxy_init_new "$address" "$port" "$uuid" "$encryption" \
+            "$network" "$security" "$remark" \
+            "$security_settings" "$stream_network_settings"
+    fi
+}
+
+_proxy_init_new() {
+    local address="$1" port="$2" uuid="$3" encryption="$4"
+    local network="$5" security="$6" remark="$7"
+    local security_settings="$8" stream_network_settings="$9"
+
     mkdir -p "$(dirname "$XRAY_CONFIG")"
 
     cat > "$XRAY_CONFIG" <<CONFIGEOF
@@ -693,6 +727,7 @@ JSONEOF
     "outbounds": [
         {
             "tag": "proxy-1",
+            "_remark": "$remark",
             "protocol": "vless",
             "settings": {
                 "vnext": [
@@ -754,6 +789,63 @@ CONFIGEOF
 
     success "Config written to $XRAY_CONFIG"
     info "Next: run 'ws proxy up' to start the transparent proxy"
+}
+
+_proxy_init_add() {
+    local address="$1" port="$2" uuid="$3" encryption="$4"
+    local network="$5" security="$6" remark="$7"
+    local security_settings="$8" stream_network_settings="$9"
+
+    # Find next proxy-N tag number
+    local last_n
+    last_n=$(grep -oP '"tag":\s*"proxy-\K\d+' "$XRAY_CONFIG" | sort -n | tail -1)
+    local next_n=$(( ${last_n:-0} + 1 ))
+    local tag="proxy-${next_n}"
+
+    # Build outbound JSON
+    local outbound_json
+    outbound_json=$(cat <<OUTBOUNDEOF
+{
+    "tag": "$tag",
+    "_remark": "$remark",
+    "protocol": "vless",
+    "settings": {
+        "vnext": [
+            {
+                "address": "$address",
+                "port": $port,
+                "users": [
+                    {
+                        "id": "$uuid",
+                        "encryption": "$encryption",
+                        "flow": ""
+                    }
+                ]
+            }
+        ]
+    },
+    "streamSettings": {
+        "network": "$network",
+        "security": "$security"${security_settings}${stream_network_settings}
+    }
+}
+OUTBOUNDEOF
+    )
+
+    # Insert new outbound before "direct" using node
+    node -e '
+        const fs = require("fs");
+        const configPath = process.argv[1];
+        const outbound = JSON.parse(process.argv[2]);
+        const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+        const idx = config.outbounds.findIndex(o => o.tag === "direct");
+        if (idx === -1) config.outbounds.push(outbound);
+        else config.outbounds.splice(idx, 0, outbound);
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 4) + "\n");
+    ' "$XRAY_CONFIG" "$outbound_json"
+
+    success "Added node '$tag'${remark:+ ($remark)} to config"
+    info "Restart proxy to apply: ws proxy down && ws proxy up"
 }
 
 # -----------------------------------------------------------------------------
