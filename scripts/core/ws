@@ -5,12 +5,12 @@
 
 set -euo pipefail
 
-readonly VERSION="1.1.0"
+readonly VERSION="1.2.0"
 readonly WORKSPACES_DIR="${WORKSPACES_DIR:-$HOME/workspaces}"
 readonly PROFILES_DIR="${PROFILES_DIR:-$HOME/.config/workspaces/profiles}"
 readonly PROXY_CONTAINER="dev-proxy"
-readonly PROXY_NETWORK="devnet"
 readonly PROXY_IMAGE="devpod-proxy"
+readonly XRAY_CONFIG="$HOME/.config/xray/config.json"
 
 # -----------------------------------------------------------------------------
 # Helpers
@@ -19,6 +19,7 @@ readonly PROXY_IMAGE="devpod-proxy"
 die() { printf '\033[31mError:\033[0m %s\n' "$1" >&2; exit 1; }
 info() { printf '\033[34m==>\033[0m %s\n' "$1"; }
 success() { printf '\033[32m✓\033[0m %s\n' "$1"; }
+warn() { printf '\033[33m!\033[0m %s\n' "$1"; }
 
 usage() {
     cat <<EOF
@@ -33,7 +34,15 @@ Commands:
   delete <name>          Delete workspace
   ssh <name>             SSH into workspace
   code <name>            Open in VS Code
-  proxy <subcmd>         Manage proxy container (up|down|status|logs)
+  proxy <subcmd>         Manage transparent proxy container
+    up                   Start proxy container
+    down                 Stop and remove proxy container
+    status               Show proxy container status
+    logs                 Show proxy container logs
+    rebuild              Force rebuild proxy image
+    test                 Show exit IP (verify proxy works)
+    check                Verify prerequisites
+    init                 Generate xray config from VLESS URI
 
 Environment:
   WORKSPACES_DIR         Storage location (default: ~/workspaces)
@@ -157,24 +166,26 @@ cmd_code() {
     devpod up "$WORKSPACES_DIR/$1" --ide vscode
 }
 
+# -----------------------------------------------------------------------------
+# Proxy commands
+# -----------------------------------------------------------------------------
+
 cmd_proxy() {
     case "${1:-}" in
-        up)     proxy_up ;;
-        down)   proxy_down ;;
-        status) proxy_status ;;
-        logs)   proxy_logs ;;
-        *)      die "Usage: ws proxy [up|down|status|logs]" ;;
+        up)      proxy_up ;;
+        down)    proxy_down ;;
+        status)  proxy_status ;;
+        logs)    proxy_logs ;;
+        rebuild) proxy_rebuild ;;
+        test)    proxy_test ;;
+        check)   proxy_check ;;
+        init)    proxy_init ;;
+        *)       die "Usage: ws proxy [up|down|status|logs|rebuild|test|check|init]" ;;
     esac
 }
 
 proxy_up() {
-    local config="$HOME/.config/xray/config.json"
-    [[ -f "$config" ]] || die "Xray config not found: $config"
-
-    if ! docker network inspect "$PROXY_NETWORK" &>/dev/null; then
-        info "Creating network $PROXY_NETWORK"
-        docker network create "$PROXY_NETWORK"
-    fi
+    [[ -f "$XRAY_CONFIG" ]] || die "Xray config not found: $XRAY_CONFIG (run 'ws proxy init' first)"
 
     if docker inspect "$PROXY_CONTAINER" &>/dev/null; then
         success "Proxy already running"
@@ -190,14 +201,12 @@ proxy_up() {
     info "Starting proxy container"
     docker run -d \
         --name "$PROXY_CONTAINER" \
-        --network "$PROXY_NETWORK" \
+        --cap-add=NET_ADMIN \
         --restart unless-stopped \
-        -v "$config:/etc/xray/config.json:ro" \
-        -p 10808:10808 \
-        -p 10809:10809 \
+        -v "$XRAY_CONFIG:/etc/xray/config.json:ro" \
         "$PROXY_IMAGE"
 
-    success "Proxy started (SOCKS5 :10808, HTTP :10809)"
+    success "Proxy started (transparent mode)"
 }
 
 proxy_down() {
@@ -210,7 +219,7 @@ proxy_down() {
 proxy_status() {
     if docker inspect "$PROXY_CONTAINER" &>/dev/null; then
         docker ps --filter "name=^/${PROXY_CONTAINER}$" \
-            --format "  Status: {{.Status}}\n  Ports:  {{.Ports}}"
+            --format "  Status: {{.Status}}"
     else
         echo "  Proxy is not running"
     fi
@@ -218,6 +227,282 @@ proxy_status() {
 
 proxy_logs() {
     docker logs --tail=50 "$PROXY_CONTAINER" || die "Proxy is not running"
+}
+
+proxy_rebuild() {
+    info "Removing old proxy image"
+    docker stop "$PROXY_CONTAINER" 2>/dev/null || true
+    docker rm "$PROXY_CONTAINER" 2>/dev/null || true
+    docker rmi "$PROXY_IMAGE" 2>/dev/null || true
+
+    info "Building proxy image"
+    docker build -t "$PROXY_IMAGE" "$PROFILES_DIR/proxy"
+    success "Proxy image rebuilt"
+}
+
+proxy_test() {
+    if ! docker inspect "$PROXY_CONTAINER" &>/dev/null; then
+        die "Proxy is not running (start with 'ws proxy up')"
+    fi
+
+    info "Checking exit IP via proxy"
+    docker exec "$PROXY_CONTAINER" \
+        curl -sf --max-time 10 https://ifconfig.me || die "Failed to reach ifconfig.me"
+    echo
+}
+
+proxy_check() {
+    local ok=true
+
+    # Docker daemon
+    if docker info &>/dev/null; then
+        success "Docker is running"
+    else
+        warn "Docker is not running"
+        ok=false
+    fi
+
+    # Xray config
+    if [[ -f "$XRAY_CONFIG" ]]; then
+        success "Xray config exists: $XRAY_CONFIG"
+    else
+        warn "Xray config missing: $XRAY_CONFIG (run 'ws proxy init')"
+        ok=false
+    fi
+
+    # Proxy image
+    if docker image inspect "$PROXY_IMAGE" &>/dev/null; then
+        success "Proxy image built"
+    else
+        warn "Proxy image not built (run 'ws proxy up' or 'ws proxy rebuild')"
+        ok=false
+    fi
+
+    # Proxy container
+    if docker inspect "$PROXY_CONTAINER" &>/dev/null; then
+        local state
+        state=$(docker inspect -f '{{.State.Status}}' "$PROXY_CONTAINER")
+        if [[ "$state" == "running" ]]; then
+            success "Proxy container running"
+        else
+            warn "Proxy container exists but state: $state"
+            ok=false
+        fi
+    else
+        warn "Proxy container not started (run 'ws proxy up')"
+        ok=false
+    fi
+
+    $ok || echo && info "Run 'ws proxy init' to generate config, then 'ws proxy up' to start"
+}
+
+# -----------------------------------------------------------------------------
+# VLESS URI parser and config generator
+# -----------------------------------------------------------------------------
+
+proxy_init() {
+    if [[ -f "$XRAY_CONFIG" ]]; then
+        read -p "Config already exists at $XRAY_CONFIG. Overwrite? [y/N] " -n 1 -r
+        echo
+        [[ $REPLY =~ ^[Yy]$ ]] || { info "Aborted"; return; }
+    fi
+
+    echo "Enter your VLESS URI (vless://...):"
+    read -r vless_uri
+
+    [[ "$vless_uri" =~ ^vless:// ]] || die "Invalid URI: must start with vless://"
+
+    # --- Parse VLESS URI ---
+    # Format: vless://UUID@ADDRESS:PORT?params#REMARK
+
+    local without_scheme="${vless_uri#vless://}"
+    local main_part="${without_scheme%%#*}"
+    local userinfo="${main_part%%@*}"
+    local hostport_params="${main_part#*@}"
+    local hostport="${hostport_params%%\?*}"
+    local query=""
+    [[ "$hostport_params" == *"?"* ]] && query="${hostport_params#*\?}"
+
+    local uuid="$userinfo"
+    local address="${hostport%:*}"
+    local port="${hostport##*:}"
+
+    # Parse query parameters
+    local encryption="" network="" security="" sni="" pbk="" sid="" fp=""
+    local host="" path="" header_type="" spider_x="" mode=""
+
+    while IFS='=' read -r key value; do
+        value=$(printf '%s' "$value" | sed 's/%2F/\//g; s/%3A/:/g; s/%40/@/g; s/%3D/=/g; s/%26/\&/g; s/%3F/?/g')
+        case "$key" in
+            encryption)  encryption="$value" ;;
+            type)        network="$value" ;;
+            security)    security="$value" ;;
+            sni)         sni="$value" ;;
+            pbk)         pbk="$value" ;;
+            sid)         sid="$value" ;;
+            fp)          fp="$value" ;;
+            host)        host="$value" ;;
+            path)        path="$value" ;;
+            headerType)  header_type="$value" ;;
+            spx)         spider_x="$value" ;;
+            mode)        mode="$value" ;;
+        esac
+    done < <(printf '%s' "$query" | tr '&' '\n')
+
+    encryption="${encryption:-none}"
+    network="${network:-tcp}"
+    security="${security:-reality}"
+    fp="${fp:-chrome}"
+
+    info "Parsed VLESS config:"
+    echo "  Address:    $address"
+    echo "  Port:       $port"
+    echo "  UUID:       ${uuid:0:8}..."
+    echo "  Network:    $network"
+    echo "  Security:   $security"
+    [[ -n "$sni" ]] && echo "  SNI:        $sni"
+    [[ -n "$pbk" ]] && echo "  Public key: ${pbk:0:8}..."
+
+    # --- Build stream settings ---
+    local stream_network_settings=""
+    case "$network" in
+        ws)
+            stream_network_settings=$(cat <<JSONEOF
+,
+                "wsSettings": {
+                    "path": "${path:-/}",
+                    "headers": {
+                        "Host": "${host:-$sni}"
+                    }
+                }
+JSONEOF
+            )
+            ;;
+        grpc)
+            stream_network_settings=$(cat <<JSONEOF
+,
+                "grpcSettings": {
+                    "serviceName": "${path:-}",
+                    "multiMode": ${mode:-false}
+                }
+JSONEOF
+            )
+            ;;
+        tcp)
+            if [[ "$header_type" == "http" ]]; then
+                stream_network_settings=$(cat <<JSONEOF
+,
+                "tcpSettings": {
+                    "header": {
+                        "type": "http",
+                        "request": {
+                            "path": ["${path:-/}"],
+                            "headers": {
+                                "Host": ["${host:-$sni}"]
+                            }
+                        }
+                    }
+                }
+JSONEOF
+                )
+            fi
+            ;;
+    esac
+
+    local security_settings=""
+    case "$security" in
+        reality)
+            security_settings=$(cat <<JSONEOF
+,
+                "realitySettings": {
+                    "serverName": "${sni:-}",
+                    "fingerprint": "$fp",
+                    "publicKey": "${pbk:-}",
+                    "shortId": "${sid:-}",
+                    "spiderX": "${spider_x:-}"
+                }
+JSONEOF
+            )
+            ;;
+        tls)
+            security_settings=$(cat <<JSONEOF
+,
+                "tlsSettings": {
+                    "serverName": "${sni:-}",
+                    "fingerprint": "$fp"
+                }
+JSONEOF
+            )
+            ;;
+    esac
+
+    # --- Generate config ---
+    mkdir -p "$(dirname "$XRAY_CONFIG")"
+
+    cat > "$XRAY_CONFIG" <<CONFIGEOF
+{
+    "inbounds": [
+        {
+            "tag": "transparent",
+            "port": 12345,
+            "protocol": "dokodemo-door",
+            "settings": {
+                "network": "tcp",
+                "followRedirect": true
+            },
+            "sniffing": {
+                "enabled": true,
+                "destOverride": ["http", "tls", "quic"]
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "tag": "proxy",
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "$address",
+                        "port": $port,
+                        "users": [
+                            {
+                                "id": "$uuid",
+                                "encryption": "$encryption",
+                                "flow": ""
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "network": "$network",
+                "security": "$security"${security_settings}${stream_network_settings}
+            }
+        },
+        {
+            "tag": "direct",
+            "protocol": "freedom",
+            "settings": {}
+        }
+    ],
+    "routing": {
+        "domainStrategy": "IPIfNonMatch",
+        "rules": [
+            {
+                "type": "field",
+                "ip": [
+                    "geoip:private"
+                ],
+                "outboundTag": "direct"
+            }
+        ]
+    }
+}
+CONFIGEOF
+
+    success "Config written to $XRAY_CONFIG"
+    info "Next: run 'ws proxy up' to start the transparent proxy"
 }
 
 # -----------------------------------------------------------------------------
