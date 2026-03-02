@@ -42,6 +42,8 @@ and an optional transparent VLESS proxy.
 
 ```bash
 ws new myproject go --proxy   # create workspace with proxy networking
+ws new myproject              # auto-detect profile from project files
+ws profile create custom      # generate a new profile interactively
 ws start myproject
 ws ssh myproject
 ```
