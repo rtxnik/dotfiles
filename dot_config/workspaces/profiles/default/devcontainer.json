@@ -11,7 +11,9 @@
 		"ghcr.io/devcontainers/features/github-cli:1": {}
 	},
 	"mounts": [],
-	"containerEnv": { "WORKSPACE_PROFILE": "default" },
+	"containerEnv": {
+		"WORKSPACE_PROFILE": "default"
+	},
 	"postCreateCommand": "bash .devcontainer/post-create.sh",
 	"remoteUser": "vscode"
 }

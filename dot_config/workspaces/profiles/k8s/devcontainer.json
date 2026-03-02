@@ -12,7 +12,9 @@
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
 	},
 	"mounts": [],
-	"containerEnv": { "WORKSPACE_PROFILE": "k8s" },
+	"containerEnv": {
+		"WORKSPACE_PROFILE": "k8s"
+	},
 	"postCreateCommand": "bash .devcontainer/post-create.sh",
 	"remoteUser": "vscode"
 }
