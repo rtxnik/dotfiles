@@ -45,13 +45,13 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply git@github.com:rtxnik/dotfi
 | `k8s` | kubectl, helm, kind, flux, argocd |
 | `web` | node, bun, deno, pnpm |
 
-Dev containers route all TCP traffic through a transparent VLESS proxy
+Dev containers can route all TCP traffic through a transparent VLESS proxy
 (iptables NAT). No env vars needed — traffic interception is automatic.
 
 ```bash
 ws proxy init            # generate config from VLESS URI
 ws proxy up              # start transparent proxy container
-ws new myproject go      # create Go workspace (shared network namespace)
+ws new myproject go --proxy   # create workspace with transparent proxy
 ws start myproject
 ws ssh myproject
 # Inside: curl https://ifconfig.me → proxy exit IP
