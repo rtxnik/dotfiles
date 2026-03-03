@@ -29,10 +29,12 @@ fi
 
 export PATH="$HOME/.local/bin:$PATH"
 
-if [[ -f "$PWD/.mise.toml" ]]; then
+WORKSPACE_MISE="$PWD/.devcontainer/mise.toml"
+
+if [[ -f "$WORKSPACE_MISE" ]]; then
     log "Merging mise configs (global + workspace)"
     mise trust "$HOME/.config/mise/config.toml" 2>/dev/null || true
-    mise trust "$PWD/.mise.toml"
+    mise trust "$WORKSPACE_MISE"
     
     global_config="$HOME/.config/mise/config.toml"
     merged=$(awk '
@@ -107,7 +109,7 @@ if [[ -f "$PWD/.mise.toml" ]]; then
             }
         }
     }
-    ' "$PWD/.mise.toml" "$global_config")
+    ' "$WORKSPACE_MISE" "$global_config")
 
     printf '%s\n' "$merged" > "$global_config.tmp"
     mv "$global_config.tmp" "$global_config"
