@@ -2,12 +2,12 @@
 gpg_verify = false
 
 [tools]
-neovim = "latest"
+neovim = "0.10"
+chezmoi = "2"
 ripgrep = "latest"
 lsd = "latest"
 bat = "latest"
 fzf = "latest"
 fd = "latest"
 node = "latest"
-chezmoi = "latest"
 usage = "latest"

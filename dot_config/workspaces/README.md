@@ -223,6 +223,40 @@ The proxy config lives at `~/.config/xray/config.json` on the host (not tracked
 in this repo — contains secrets). Use `ws proxy init` to generate it from a
 VLESS URI, or copy `config.json.example` and fill in your values.
 
+## Proxy Troubleshooting
+
+**Workspace loses network after proxy rebuild:**
+
+The `ws proxy rebuild` command restarts the proxy container, which
+temporarily drops network for all connected workspaces. To restore
+connectivity, restart the affected workspace:
+
+```bash
+ws stop <name> && ws start <name>
+```
+
+**Checking proxy health:**
+
+```bash
+ws proxy check    # verify docker, config, image, container are OK
+ws proxy test     # check health and uptime
+ws proxy logs     # inspect xray logs for errors
+```
+
+**Checking workspace connectivity (from inside the container):**
+
+```bash
+curl -s https://ifconfig.me   # should show the proxy exit IP
+```
+
+**Proxy container won't start:**
+
+```bash
+ws proxy check     # identify which prerequisite is failing
+ws proxy rebuild   # rebuild the image from scratch
+ws proxy up        # try starting again
+```
+
 ## Requirements
 
 - [devpod](https://devpod.sh/)

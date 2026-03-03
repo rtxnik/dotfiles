@@ -25,8 +25,22 @@ iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner xray -j RETURN
 iptables -t nat -A OUTPUT -p udp -m owner --uid-owner xray -j RETURN
 iptables -t nat -A OUTPUT -j XRAY
 
-echo "iptables rules applied"
+# Verify iptables rules were applied
+if iptables -t nat -L XRAY -n >/dev/null 2>&1; then
+    echo "iptables rules applied"
+else
+    echo "ERROR: iptables rules failed to apply" >&2
+    exit 1
+fi
 
 # --- Start xray ---
+
+# Validate config before starting
+if ! su -s /bin/sh xray -c "xray run -test -c /etc/xray/config.json" >/dev/null 2>&1; then
+    echo "ERROR: xray config validation failed" >&2
+    su -s /bin/sh xray -c "xray run -test -c /etc/xray/config.json" >&2
+    exit 1
+fi
+echo "xray config validated"
 
 exec su -s /bin/sh xray -c "xray run -c /etc/xray/config.json"
