@@ -6,10 +6,6 @@
 
 set -euo pipefail
 
-# --- Enable IP forwarding for routing workspace traffic ---
-
-echo 1 > /proc/sys/net/ipv4/ip_forward
-
 # --- iptables NAT rules ---
 
 iptables -t nat -N XRAY
