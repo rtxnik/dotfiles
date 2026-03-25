@@ -1,0 +1,8 @@
+[tools]
+opentofu = "latest"
+kubectl = "latest"
+helm = "latest"
+k9s = "latest"
+stern = "latest"
+jq = "latest"
+yq = "latest"
