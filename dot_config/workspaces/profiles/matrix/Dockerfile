@@ -3,10 +3,10 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl \
     dnsutils iputils-ping netcat-openbsd traceroute mtr-tiny \
-    iproute2 tcpdump nmap python3-pip \
+    iproute2 tcpdump nmap pipx \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/* \
     && curl -fsSL https://mise.jdx.dev/install.sh | sh \
-    && pip3 install ansible
+    && pipx install ansible-core && pipx inject ansible-core ansible
 
 ENV PATH="/home/vscode/.local/bin:${PATH}"
