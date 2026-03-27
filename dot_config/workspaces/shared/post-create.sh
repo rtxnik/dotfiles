@@ -117,4 +117,13 @@ if [[ -f "$WORKSPACE_MISE" ]]; then
     mise install --yes || true
 fi
 
+# Run profile-specific post-create script if available.
+if [[ -n "${WORKSPACE_PROFILE:-}" ]]; then
+    profile_script="$HOME/.config/workspaces/profiles/$WORKSPACE_PROFILE/post-create-$WORKSPACE_PROFILE.sh"
+    if [[ -f "$profile_script" ]]; then
+        log "Running $WORKSPACE_PROFILE profile setup"
+        bash "$profile_script"
+    fi
+fi
+
 log "Setup complete"

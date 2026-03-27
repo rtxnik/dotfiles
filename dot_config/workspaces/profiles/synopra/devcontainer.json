@@ -15,10 +15,7 @@
 	"containerEnv": {
 		"WORKSPACE_PROFILE": "synopra"
 	},
-	"postCreateCommand": {
-		"dotfiles": "bash .devcontainer/post-create.sh",
-		"synopra": "bash .devcontainer/post-create-synopra.sh"
-	},
+	"postCreateCommand": "bash .devcontainer/post-create.sh",
 	"postStartCommand": "docker compose -f docker-compose.dev.yml up -d 2>/dev/null || true",
 	"forwardPorts": [3000, 3001, 5432, 6379, 9090, 3100, 37777],
 	"remoteUser": "vscode"
