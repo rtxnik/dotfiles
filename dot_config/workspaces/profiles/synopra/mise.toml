@@ -1,0 +1,12 @@
+[settings.node]
+gpg_verify = false
+
+[tools]
+node = "22"
+pnpm = "latest"
+bun = "latest"
+jq = "latest"
+yq = "latest"
+fzf = "latest"
+ripgrep = "latest"
+fd = "latest"
