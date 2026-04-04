@@ -1,4 +1,8 @@
+[settings.node]
+gpg_verify = false
+
 [tools]
+node = "lts"
 jq = "latest"
 yq = "latest"
 fzf = "latest"
