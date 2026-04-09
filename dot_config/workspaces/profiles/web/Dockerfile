@@ -1,7 +1,10 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl iproute2 \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates curl iproute2 \
+       build-essential python3 pkg-config \
+       libvips-dev \
     && rm -rf /var/lib/apt/lists/* \
     && curl -fsSL https://mise.jdx.dev/install.sh | sh
 
