@@ -2,7 +2,7 @@
 gpg_verify = false
 
 [tools]
-neovim = "0.10"
+neovim = "latest"
 chezmoi = "2"
 ripgrep = "latest"
 lsd = "latest"

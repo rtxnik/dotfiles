@@ -9,20 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tmux shellcheck \
     && rm -rf /var/lib/apt/lists/*
 
-# Neovim — latest stable release tarball with architecture detection.
-RUN ARCH="$(dpkg --print-architecture)" \
-    && case "$ARCH" in \
-         amd64) NVIM_ARCH="x86_64" ;; \
-         arm64) NVIM_ARCH="arm64"  ;; \
-         *)     echo "unsupported arch: $ARCH" && exit 1 ;; \
-       esac \
-    && curl -fsSL -L "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${NVIM_ARCH}.tar.gz" \
-         -o /tmp/nvim.tar.gz \
-    && tar xzf /tmp/nvim.tar.gz -C /opt \
-    && mv /opt/nvim-linux-"${NVIM_ARCH}" /opt/nvim \
-    && ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim \
-    && rm /tmp/nvim.tar.gz
-
 # bats-core — bash test framework (workflow-kit tests require >= 1.11)
 ARG BATS_VERSION=1.11.1
 RUN git clone --depth 1 --branch "v${BATS_VERSION}" \
