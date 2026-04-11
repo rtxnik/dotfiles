@@ -7,6 +7,20 @@
 set -euo pipefail
 
 # --- iptables NAT rules ---
+#
+# On container restart Docker reuses the network namespace, so any rules
+# from the previous run persist. Clean up before re-applying to keep the
+# entrypoint idempotent (otherwise `-N XRAY` fails with "Chain already
+# exists" and `set -e` aborts the whole startup).
+
+# Detach XRAY from OUTPUT/PREROUTING if previously attached, then flush
+# and drop the chain so we can recreate it from scratch.
+while iptables -t nat -D OUTPUT -j XRAY 2>/dev/null; do :; done
+while iptables -t nat -D PREROUTING -j XRAY 2>/dev/null; do :; done
+iptables -t nat -D OUTPUT -p tcp -m owner --uid-owner xray -j RETURN 2>/dev/null || true
+iptables -t nat -D OUTPUT -p udp -m owner --uid-owner xray -j RETURN 2>/dev/null || true
+iptables -t nat -F XRAY 2>/dev/null || true
+iptables -t nat -X XRAY 2>/dev/null || true
 
 iptables -t nat -N XRAY
 
