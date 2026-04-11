@@ -6,7 +6,7 @@ set -euo pipefail
 
 log() { printf '[meta] %s\n' "$1"; }
 
-BRANCH="claude/unified-workflow-devpod-kYzgp"
+BRANCH="feat/meta-workspace-profile"
 BASE_DIR="$HOME/projects"
 mkdir -p "$BASE_DIR"
 

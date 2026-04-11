@@ -9,16 +9,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tmux shellcheck \
     && rm -rf /var/lib/apt/lists/*
 
-# Neovim — official release tarball with architecture detection.
-# Pinned version; update ARG to upgrade.
-ARG NVIM_VERSION=v0.10.4
+# Neovim — latest stable release tarball with architecture detection.
 RUN ARCH="$(dpkg --print-architecture)" \
     && case "$ARCH" in \
          amd64) NVIM_ARCH="x86_64" ;; \
          arm64) NVIM_ARCH="arm64"  ;; \
          *)     echo "unsupported arch: $ARCH" && exit 1 ;; \
        esac \
-    && curl -fsSL "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-${NVIM_ARCH}.tar.gz" \
+    && curl -fsSL -L "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${NVIM_ARCH}.tar.gz" \
          -o /tmp/nvim.tar.gz \
     && tar xzf /tmp/nvim.tar.gz -C /opt \
     && mv /opt/nvim-linux-"${NVIM_ARCH}" /opt/nvim \
