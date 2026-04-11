@@ -25,6 +25,7 @@ ws delete myproject           # delete
 | `python` | python, uv, ruff, jq, yq, fzf, ripgrep, fd |
 | `rust` | rust, cargo-binstall, jq, yq, fzf, ripgrep, fd |
 | `web` | node (lts), bun, deno, pnpm |
+| `meta` | go, golangci-lint, goreleaser, node (lts), pnpm, neovim, bats, shellcheck, shfmt, tmux, git-lfs |
 
 ## Auto-detect
 

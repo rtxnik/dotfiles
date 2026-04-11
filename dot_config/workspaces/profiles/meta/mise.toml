@@ -1,0 +1,17 @@
+[settings.node]
+gpg_verify = false
+
+[tools]
+go = "latest"
+golangci-lint = "latest"
+goreleaser = "latest"
+node = "lts"
+pnpm = "latest"
+shfmt = "latest"
+jq = "latest"
+yq = "latest"
+fzf = "latest"
+ripgrep = "latest"
+fd = "latest"
+bat = "latest"
+delta = "latest"
