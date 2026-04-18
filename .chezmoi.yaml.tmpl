@@ -1,0 +1,42 @@
+{{/*
+.chezmoi.yaml.tmpl — host-detection + age multi-recipient encryption envelope.
+
+Host detection cascade (matches Phase 6 RESEARCH Spec 4):
+  - darwin → macos
+  - linux + DEVPOD env → devpod (headless container)
+  - linux + IOS env → ios (Working Copy folder-sync on iPadOS/iOS)
+  - else → linux-other (fallback; no vault-ai plugin install)
+
+Encryption: age with multi-recipient recipients (primary + escrow) per
+vault-ai ADR-sec-02 (chezmoi + age multi-recipient primary; git-crypt
+REJECTED). Two recipients give single-key-loss resilience — any one of
+the N keys can decrypt. Primary = operator's daily key. Escrow = YubiKey
+or offline offsite storage.
+
+Cross-refs: workspace-meta/.planning/phases/06-integrations/06-CONTEXT.md
+D-07 (chezmoi+age multi-recipient), D-20 (per-host templates);
+vault-ai/docs/adr/adr-sec-02-secrets-stack.md §Multi-recipient age;
+vault-ai/docs/adr/adr-ai-06-mcp-auth.md §VAULT_AI_TOKEN provisioning.
+*/ -}}
+{{- $host := "" -}}
+{{- if eq .chezmoi.os "darwin" -}}{{- $host = "macos" -}}
+{{- else if env "DEVPOD" -}}{{- $host = "devpod" -}}
+{{- else if env "IOS" -}}{{- $host = "ios" -}}
+{{- else -}}{{- $host = "linux-other" -}}{{- end }}
+
+data:
+  host: "{{ $host }}"
+  vault_path: {{- if eq $host "macos" }} "/Users/{{ env "USER" }}/projects/vault-ai"
+              {{- else if eq $host "devpod" }} "/home/vscode/projects/vault-ai"
+              {{- else if eq $host "ios" }} "/private/var/mobile/Containers/Shared/AppGroup/Obsidian/vault-ai"
+              {{- else }} "/home/{{ env "USER" }}/projects/vault-ai"{{- end }}
+
+# Multi-recipient age — primary + escrow; either key decrypts (ADR-sec-02).
+# Replace placeholder pubkeys at `chezmoi init` time with the operator's real
+# age public keys. The `age1...` prefix is verified by age 1.2.x at apply.
+encryption: age
+age:
+  identity: "~/.age/primary.key"
+  recipients:
+    - "age1primaryplaceholder0000000000000000000000000000000000pkey"
+    - "age1escrowplaceholder00000000000000000000000000000000000pkey"
