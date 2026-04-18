@@ -1,0 +1,34 @@
+# iOS host chezmoi template (offline-only, capture-only)
+# Applies when: env "IOS" is set.
+# Role: mobile capture via Working Copy folder-sync per ADR-flow-01
+#   (Amsterdam capture SOP, Phase 5 forward-ref). Desktop-side triage
+#   handles MCP calls post-push; iOS is never an MCP client.
+# Plugins: Git + QuickAdd only (minimal for mobile performance).
+# Theme: Minimal (no snippets — CSS rendering costly on mobile; ADR-visual-02
+#   mobile-ruleset mitigates but offline-only mode disables snippets entirely).
+# Sync: Working Copy folder-sync only (PRIV-02 mitigation — iOS git CLI
+#   absent on standard devices; Working Copy is the sole iOS git client).
+# Obsidian-Git auto-commit DISABLED (Phase 2 plugin lockfile CAP-01
+#   mitigation — mobile auto-commit + desktop autosave-off is dangerous).
+#
+# **No MCP bearer on iOS (PRIV-02):** iOS hosts carry no MCP bearer token.
+# iOS is capture-only; MCP calls originate from desktop AFTER the captured
+# notes are git-pushed upstream. This template intentionally OMITS the
+# vault_ai_token_source field — the grep guardrail asserts zero matches for
+# the bearer-token identifier string in this file.
+#
+# Cross-refs:
+#   workspace-meta/.planning/phases/06-integrations/06-CONTEXT.md D-20;
+#   vault-ai/docs/adr/adr-sec-02-secrets-stack.md §iOS minimal-plugins;
+#   vault-ai/_tooling/validator/tests/fixtures/hosts/ios.env (fixture
+#     matching this template's field values).
+
+obsidian_plugins:
+  - obsidian-git
+  - quickadd
+obsidian_theme: "minimal"
+obsidian_snippets: []
+sync_method: "working-copy-folder"
+vault_path: "{{ .vault_path }}"
+snippets_enabled: false
+# NO vault_ai_token_source field (PRIV-02): iOS has no MCP access.
