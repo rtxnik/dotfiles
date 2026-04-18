@@ -1,0 +1,40 @@
+# macOS host chezmoi template (interactive)
+# Applies when: .chezmoi.os == "darwin"
+# Plugins: Full 8 (Dataview, Templater, Metadata Menu, Git, Style Settings,
+#   QuickAdd, Advanced URI, Iconize) per ADR-meth-01 + Phase 2 plugin lockfile
+#   (NTYPE-16).
+# Theme: Minimal (Kepano) v8.1.7 pinned per ADR-visual-02; 5 snippets loaded
+#   (_variables, anytype-card, formal-adr, minimal-zettel, dashboard-project).
+# Sync: Obsidian-Git with autosave OFF (CAP-01 Phase 5 D-32 mobile-sync
+#   conflict mitigation — manual commit cadence on desktop).
+# VAULT_AI_TOKEN: Keychain first; fallback to age-decrypt at shell init
+#   (ADR-sec-02 secondary path).
+#
+# Cross-refs:
+#   workspace-meta/.planning/phases/06-integrations/06-CONTEXT.md D-20
+#     (per-host templates);
+#   vault-ai/docs/adr/adr-sec-02-secrets-stack.md §Multi-recipient age;
+#   vault-ai/docs/adr/adr-visual-02-theme-and-font-lockfile.md;
+#   vault-ai/_tooling/validator/tests/fixtures/hosts/macos.env (fixture
+#     matching this template's field values).
+
+obsidian_plugins:
+  - dataview
+  - templater
+  - metadata-menu
+  - obsidian-git
+  - obsidian-style-settings
+  - quickadd
+  - advanced-uri
+  - obsidian-iconize
+obsidian_theme: "minimal"
+obsidian_snippets:
+  - _variables
+  - anytype-card
+  - formal-adr
+  - minimal-zettel
+  - dashboard-project
+sync_method: "obsidian-git-autosave-off"
+vault_path: "{{ .vault_path }}"
+snippets_enabled: true
+vault_ai_token_source: "keychain-or-age"
