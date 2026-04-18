@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# chezmoi run_onchange hook — FOLDED TODO (Phase 6 D-20):
+# Ensure ~/projects/CLAUDE.md symlink to workspace-meta/CLAUDE.md survives
+# container rebuild (DevPod) or host reinstall (macOS). chezmoi re-runs this
+# script on every `chezmoi apply` AND on content change of the script body;
+# the idempotent `ln -sfn` refresh keeps the symlink healthy without side
+# effects when already correct.
+#
+# Resolves the long-standing todo: "Symlink root CLAUDE.md from
+# workspace-meta to survive container rebuild" (PROJECT.md §Pending Todos;
+# Phase 6 CONTEXT §Folded Todos).
+#
+# Cross-refs:
+#   workspace-meta/.planning/phases/06-integrations/06-CONTEXT.md §Folded
+#     Todos (root CLAUDE.md symlink);
+#   workspace-meta/CLAUDE.md (the canonical target file).
+
+set -euo pipefail
+
+TARGET="{{ .chezmoi.homeDir }}/projects/workspace-meta/CLAUDE.md"
+LINK="{{ .chezmoi.homeDir }}/projects/CLAUDE.md"
+
+# If the target is absent we log a warning and exit 0 rather than failing.
+# Rationale: workspace-meta may not be cloned on every host (iOS does not
+# host workspace-meta); the symlink only matters on desktop+devpod hosts
+# where workspace-meta is cloned alongside the sibling repos.
+if [ ! -f "$TARGET" ]; then
+  printf 'WARN: %s not found; skipping CLAUDE.md symlink\n' "$TARGET" >&2
+  exit 0
+fi
+
+# Idempotent refresh: `ln -sfn` replaces the symlink if present, creates it
+# otherwise. -n prevents dereferencing the existing target when the link
+# points at a directory (pathological case but cheap to guard against).
+ln -sfn "$TARGET" "$LINK"
+
+# Verify: readlink -f resolves the symlink to an absolute canonical path on
+# both sides; if they differ, the symlink is broken or points elsewhere.
+if [ "$(readlink -f "$LINK")" != "$(readlink -f "$TARGET")" ]; then
+  printf 'FAIL: CLAUDE.md symlink verification failed: %s -> %s\n' \
+    "$LINK" "$TARGET" >&2
+  exit 1
+fi
+
+printf 'OK: CLAUDE.md symlink intact: %s -> %s\n' "$LINK" "$TARGET"
