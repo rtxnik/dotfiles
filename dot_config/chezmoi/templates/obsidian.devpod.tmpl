@@ -1,0 +1,31 @@
+# DevPod host chezmoi template (headless)
+# Applies when: {{ env "DEVPOD" }} is set
+# Plugins: Git + schema-tooling only (minimal surface for CI-adjacent
+#   validation; no GUI-dependent plugins since DevPod is headless).
+# Theme: obsidian default (no Minimal snippets — headless, no render).
+# Sync: git CLI from shell (`git pull` + `git push` directly).
+# VAULT_AI_TOKEN: age-decrypt at shell bootstrap per ADR-ai-06.
+#
+# Cross-refs:
+#   workspace-meta/.planning/phases/06-integrations/06-CONTEXT.md D-20
+#     (per-host templates);
+#   vault-ai/docs/adr/adr-sec-02-secrets-stack.md §per-host chezmoi;
+#   vault-ai/_tooling/validator/tests/fixtures/hosts/devpod.env (Plan 05
+#     Task 1 fixture — matches this template's field values).
+
+obsidian_plugins:
+  - obsidian-git
+  - _schema_tooling
+obsidian_theme: "obsidian"
+sync_method: "git-cli"
+vault_path: "{{ .vault_path }}"
+snippets_enabled: false
+vault_ai_token_source: "age-decrypt-at-bootstrap"
+
+# FOLDED TODO (Phase 6 D-20 + 06-CONTEXT §Folded Todos):
+# Symlink ~/projects/CLAUDE.md -> workspace-meta/CLAUDE.md so the root
+# CLAUDE.md survives container rebuild. Implementation lives at:
+#   dotfiles/run_onchange_after_symlink_claude_md.sh.tmpl
+# Hook runs on every `chezmoi apply` AND on content change of the script
+# body. See the hook file for the idempotent `ln -sfn` invocation.
+claude_md_symlink: "{{ .chezmoi.homeDir }}/projects/CLAUDE.md -> {{ .chezmoi.homeDir }}/projects/workspace-meta/CLAUDE.md"
