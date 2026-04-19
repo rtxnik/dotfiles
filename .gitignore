@@ -2,3 +2,6 @@
 *.swp
 *.swo
 *~
+
+# Session logs (gsd-tools / Claude Code hook-generated)
+state/
