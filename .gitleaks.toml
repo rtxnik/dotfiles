@@ -1,0 +1,42 @@
+# gitleaks configuration for rtxnik/dotfiles
+#
+# Defends the public-by-design posture (workspace memory feedback_ai_attribution_scope.md):
+# all secrets in this repo MUST be age-encrypted via chezmoi+age (ADR-sec-02).
+#
+# Source / shape: vault-ai/.gitleaks.toml (workspace-blessed precedent)
+#               + https://github.com/gitleaks/gitleaks (config schema, retrieved 2026-05-03)
+# Verified against gitleaks v8.30.1 default ruleset.
+#
+# DEVIATION FROM CONTEXT.md D-04 (Open Question 1 resolution):
+# CONTEXT.md D-04 proposed a custom rule with id = "age-private-key" and regex
+#   '''AGE-SECRET-KEY-1[0-9A-Z]{58}'''
+# This rule is INTENTIONALLY ABSENT here because:
+#   1. The gitleaks 8.30.1 default ruleset already includes:
+#        id = "age-secret-key"
+#        regex = '''AGE-SECRET-KEY-1[QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]{58}'''
+#      which uses the canonical bech32 alphabet -- strictly stricter than D-04's
+#      [0-9A-Z] alphabet (which would match confusable letters B, I, O, 1 that
+#      bech32 disallows).
+#   2. Adding a custom rule with the same id would error on rule-id collision.
+#   3. Adding a custom rule with a different id and looser alphabet would shadow
+#      the default in some matching scenarios (Pitfall 1).
+# DO NOT add a custom age-key rule unless the upstream default is removed AND
+# defence-in-depth is the explicit goal.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for dotfiles -- placeholder pubkeys + reserved fixture paths"
+paths = [
+  # Test-fixture corpus for Phase 12. Contains documented-fake AWS-docs example
+  # values + age README example keys; non-functional.
+  '''tests/fixtures/secrets/''',
+]
+regexes = [
+  # chezmoi-init placeholder pubkeys in .chezmoi.yaml.tmpl. Pubkeys are not secret
+  # regardless, but the allowlist removes false-positive noise on transitional commits.
+  # Anchor (Pitfall 5): matches "age1<lowercase>placeholder<lowercase+digits>" --
+  # strictly the chezmoi-init format, not arbitrary "placeholder" strings.
+  '''age1[a-z]*placeholder[a-z0-9]+''',
+]
