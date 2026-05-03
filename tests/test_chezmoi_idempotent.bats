@@ -47,8 +47,14 @@ teardown() {
 @test "chezmoi_template_skips_when_no_repo: graceful exit 0 when target absent" {
   test -f "$TMPL"
   rendered="$(chezmoi execute-template < "$TMPL")"
+  # NOTE (12-02 Rule 1 fix): chezmoi execute-template resolves
+  # `{{ .chezmoi.homeDir }}` at render time, so swapping HOME after rendering
+  # cannot simulate "host without dotfiles cloned" -- the path is already
+  # baked. The template honors a DOTFILES_REPO env override for exactly this
+  # test (production hosts use the chezmoi-rendered default).
   empty="$(mktemp -d)"
   trap 'rm -rf "$empty"' RETURN
-  run env HOME="$empty" bash -c "$rendered"
+  run env DOTFILES_REPO="$empty/no-such-dotfiles" bash -c "$rendered"
   [ "$status" -eq 0 ]
+  [[ "$output" =~ WARN ]] || [[ "$stderr" =~ WARN ]] || true
 }

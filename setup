@@ -38,4 +38,15 @@ if [[ "$OSTYPE" == darwin* ]] && command -v alacritty &>/dev/null; then
     fi
 fi
 
+# Install pre-commit hook (gitleaks scan on every commit).
+# Idempotent -- safe to re-run. CONTEXT.md D-03.
+if command -v pre-commit &>/dev/null; then
+    if cd "$HOME/projects/dotfiles" 2>/dev/null; then
+        info "Installing pre-commit hooks (gitleaks scan)"
+        pre-commit install
+    fi
+else
+    info "pre-commit not on PATH -- skip; run \`pip install pre-commit==4.6.0\` then \`pre-commit install\`"
+fi
+
 success "Setup complete"

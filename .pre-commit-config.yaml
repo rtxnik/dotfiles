@@ -1,0 +1,18 @@
+# Source: https://pre-commit.com/ + https://github.com/gitleaks/gitleaks/blob/master/.pre-commit-hooks.yaml
+# (both retrieved 2026-05-03)
+#
+# Pre-commit framework config for rtxnik/dotfiles.
+# Workspace-blessed framework (vault-ai Plan 04 6-hook family precedent).
+# CLAUDE.md "hooks are bash-only" applies to hook payload scripts; pre-commit
+# as a runner that delegates to the gitleaks binary (Go) is consistent.
+
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    # rev: tag v8.30.1 -> commit SHA. SHA pin per ADR-int-04 / Phase 13 success
+    # criterion 5. Verified against api.github.com/repos/gitleaks/gitleaks/git/refs/tags/v8.30.1
+    # on 2026-05-03 (12-RESEARCH.md §Sources §Primary).
+    rev: 83d9cd684c87d95d656c1458ef04895a7f1cbd8e  # v8.30.1
+    hooks:
+      - id: gitleaks
+        # Upstream entry: `gitleaks git --pre-commit --redact --staged --verbose`
+        # (modern post-v8.19.0 syntax).
