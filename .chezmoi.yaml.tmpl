@@ -32,8 +32,8 @@ data:
               {{- else }} "/home/{{ env "USER" }}/projects/vault-ai"{{- end }}
 
 # Multi-recipient age — primary + escrow; either key decrypts (ADR-sec-02).
-# Replace placeholder pubkeys at `chezmoi init` time with the operator's real
-# age public keys. The `age1...` prefix is verified by age 1.2.x at apply.
+# Recipients list is operator-curated against docs/AUTHORIZED-HOSTS.md
+# (CONTEXT.md D-07); the `age1...` prefix is verified by age 1.2.x at apply.
 encryption: age
 age:
   identity: "~/.age/primary.key"
@@ -44,7 +44,6 @@ age:
   #
   # Add the operator-real public keys here (one quoted string per `- "ageXXX"`
   # line) AFTER running `age-keygen -y ~/.age/primary.key` on each authorized
-  # host (DevPod, MacBook). The placeholder pubkeys previously here have been
-  # removed; verify-recipients.sh will FAIL until real pubkeys are added,
-  # which is the intended gate.
+  # host (DevPod, MacBook). verify-recipients.sh will FAIL until real pubkeys
+  # are added, which is the intended gate.
   recipients: []
