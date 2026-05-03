@@ -4,12 +4,19 @@ This file is the **single source of truth** (per CONTEXT.md D-07) for which age 
 
 The invariant is enforced bidirectionally by `scripts/verify-recipients.sh` — every active row MUST appear as a recipient, and every recipient MUST appear as an active row. The CI workflow (`.github/workflows/validate.yml` `gitleaks` job) runs the script on every push and pull-request to `main`.
 
+### Tag semantics
+
+- `active` — host is provisioned with a real `age1...` pubkey; bidirectional invariant is enforced.
+- `pending` — placeholder row awaiting operator `age-keygen` (Phase 12 deferred-UAT). Ignored by the verify script until the operator substitutes a real pubkey AND flips the tag to `active`.
+- `retired` — host has been decommissioned; row preserved for audit trail. Ignored by the verify script.
+- `escrow-offline` — escrow keypair stored offline (e.g., YubiKey, USB stick); not expected to be reachable for encryption-at-the-moment. Ignored by the verify script.
+
 ## Active Hosts
 
 | hostname | role | pubkey | fingerprint | provisioned | host_type | tag |
 |----------|------|--------|-------------|-------------|-----------|-----|
-| devpod | primary | OPERATOR-FILL-DEVPOD-PUBKEY-AGE1-XXX...XXX | XXXXXXXX | 2026-05-03 | DevPod | active |
-| macbook | primary | OPERATOR-FILL-MACBOOK-PUBKEY-AGE1-XXX...XXX | XXXXXXXX | 2026-05-03 | macOS | active |
+| devpod | primary | OPERATOR-FILL-DEVPOD-PUBKEY-AGE1-XXX...XXX | XXXXXXXX | 2026-05-03 | DevPod | pending |
+| macbook | primary | OPERATOR-FILL-MACBOOK-PUBKEY-AGE1-XXX...XXX | XXXXXXXX | 2026-05-03 | macOS | pending |
 
 ## Retired Hosts (kept for audit trail; NOT compared by verify script)
 
@@ -26,7 +33,7 @@ The invariant is enforced bidirectionally by `scripts/verify-recipients.sh` — 
    age-keygen -y ~/.age/primary.key   # prints the public key
    ```
 
-2. Append a row to the **Active Hosts** table above with the printed `age1...` pubkey, last 8 chars as fingerprint, today's ISO date, and `tag = active`.
+2. Append a row to the **Active Hosts** table above with the printed `age1...` pubkey, last 8 chars as fingerprint, today's ISO date, and `tag = active`. (For Phase 12 deferred-UAT: replace the existing `OPERATOR-FILL-...` row's pubkey + fingerprint and flip its tag from `pending` to `active`.)
 3. Add the same `age1...` pubkey to the `recipients:` list in `.chezmoi.yaml.tmpl`.
 4. Run `bash scripts/verify-recipients.sh` locally — it MUST exit 0 before commit.
 5. On every other authorized host, run `chezmoi apply` to refresh the encryption envelope so the new host can decrypt future commits.
