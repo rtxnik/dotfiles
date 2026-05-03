@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Source: existing dotfiles/run_onchange_after_symlink_claude_md.sh.tmpl pattern
+#         + CONTEXT.md D-03.
+#
+# chezmoi run_onchange hook -- keeps the pre-commit hook installed across
+# fresh `chezmoi apply` on every authorized host (DevPod, MacBook, iPhone).
+#
+# Best-effort: exits 0 (with stderr WARN) on hosts where the dotfiles repo
+# isn't cloned (iOS) or pre-commit isn't on PATH (operator hasn't run setup).
+# Idempotent: `pre-commit install` is documented safe to re-run.
+
+set -euo pipefail
+
+# Default repo path is the chezmoi-rendered home; DOTFILES_REPO env override
+# exists for test isolation (tests/test_chezmoi_idempotent.bats simulates a
+# host where the dotfiles repo is not cloned).
+REPO="${DOTFILES_REPO:-{{ .chezmoi.homeDir }}/projects/dotfiles}"
+
+if [ ! -d "$REPO/.git" ]; then
+  printf 'WARN: %s not a git repo; skipping pre-commit install\n' "$REPO" >&2
+  exit 0
+fi
+
+if ! command -v pre-commit >/dev/null 2>&1; then
+  printf 'WARN: pre-commit not on PATH; run `pip install pre-commit==4.6.0` first\n' >&2
+  exit 0
+fi
+
+cd "$REPO"
+pre-commit install
+printf 'OK: pre-commit hook installed at %s/.git/hooks/pre-commit\n' "$REPO"
