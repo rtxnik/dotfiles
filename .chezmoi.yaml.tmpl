@@ -1,6 +1,15 @@
 {{/*
 .chezmoi.yaml.tmpl — host-detection + age multi-recipient encryption envelope.
 
+Plan 14-15 (closes 14-REVIEW WR-05 + IN-05):
+  - Recipients now sourced from `.age-recipients.yaml` via `include + fromYaml`
+    rather than hardcoded `age1...` strings (single source of truth, audit-trail
+    friendly diff: rotation shows `name: <host>` changed pubkey, not just an
+    opaque substring).
+  - Boot-time fail-loud on conflicting host signals (`DEVPOD` env set on darwin,
+    `IOS` env set on linux/darwin, etc.) — operator misconfiguration must
+    surface BEFORE chezmoi apply mutates state.
+
 Host detection cascade (matches Phase 6 RESEARCH Spec 4):
   - darwin → macos
   - linux + DEVPOD env → devpod (headless container)
@@ -16,8 +25,18 @@ or offline offsite storage.
 Cross-refs: workspace-meta/.planning/phases/06-integrations/06-CONTEXT.md
 D-07 (chezmoi+age multi-recipient), D-20 (per-host templates);
 vault-ai/docs/adr/adr-sec-02-secrets-stack.md §Multi-recipient age;
-vault-ai/docs/adr/adr-ai-06-mcp-auth.md §VAULT_AI_TOKEN provisioning.
+vault-ai/docs/adr/adr-ai-06-mcp-auth.md §VAULT_AI_TOKEN provisioning;
+.age-recipients.yaml (Plan 14-15 SoT).
 */ -}}
+{{- /* Plan 14-15 / 14-REVIEW IN-05: fail-loud on conflicting host signals.
+       DEVPOD set on darwin or IOS set on linux/darwin = operator misconfigured
+       something; refuse to render rather than route to the wrong vault path. */ -}}
+{{- if and (env "DEVPOD") (eq .chezmoi.os "darwin") -}}
+{{- fail "Plan 14-15 / IN-05: DEVPOD env var set on darwin host — host detection ambiguous. Unset DEVPOD or run on Linux." -}}
+{{- end -}}
+{{- if and (env "IOS") (ne .chezmoi.os "linux") -}}
+{{- fail "Plan 14-15 / IN-05: IOS env var set on non-linux host — host detection ambiguous. Unset IOS or run on the iOS Working Copy host." -}}
+{{- end -}}
 {{- $host := "" -}}
 {{- if eq .chezmoi.os "darwin" -}}{{- $host = "macos" -}}
 {{- else if env "DEVPOD" -}}{{- $host = "devpod" -}}
@@ -32,18 +51,15 @@ data:
               {{- else }} "/home/{{ env "USER" }}/projects/vault-ai"{{- end }}
 
 # Multi-recipient age — primary + escrow; either key decrypts (ADR-sec-02).
-# Recipients list is operator-curated against docs/AUTHORIZED-HOSTS.md
-# (CONTEXT.md D-07); the `age1...` prefix is verified by age 1.2.x at apply.
+# Recipients are sourced from `.age-recipients.yaml` (single source of truth,
+# audit-trail friendly per Plan 14-15 / WR-05). `scripts/verify-recipients.sh`
+# enforces the bidirectional invariant against `docs/AUTHORIZED-HOSTS.md` on
+# every commit and in CI.
+{{- $recipients := (include ".age-recipients.yaml" | fromYaml) }}
 encryption: age
 age:
   identity: "~/.age/primary.key"
-  # OPERATOR-FILL: see docs/AUTHORIZED-HOSTS.md for the canonical authorized-host
-  # allowlist (CONTEXT.md D-07). Each entry below MUST correspond to an
-  # `active`-tagged row in that document; scripts/verify-recipients.sh enforces
-  # the bidirectional invariant on every commit and in CI.
-  #
-  # Add the operator-real public keys here (one quoted string per `- "ageXXX"`
-  # line) AFTER running `age-keygen -y ~/.age/primary.key` on each authorized
-  # host (DevPod, MacBook). verify-recipients.sh will FAIL until real pubkeys
-  # are added, which is the intended gate.
-  recipients: []
+  recipients:
+{{- range $recipients.active }}
+    - "{{ .pubkey }}"  # {{ .name }} — {{ .role }}
+{{- end }}

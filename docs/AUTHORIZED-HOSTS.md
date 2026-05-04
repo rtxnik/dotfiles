@@ -15,8 +15,8 @@ The invariant is enforced bidirectionally by `scripts/verify-recipients.sh` — 
 
 | hostname | role | pubkey | fingerprint | provisioned | host_type | tag |
 |----------|------|--------|-------------|-------------|-----------|-----|
-| devpod | primary | OPERATOR-FILL-DEVPOD-PUBKEY-AGE1-XXX...XXX | XXXXXXXX | 2026-05-03 | DevPod | pending |
-| macbook | primary | OPERATOR-FILL-MACBOOK-PUBKEY-AGE1-XXX...XXX | XXXXXXXX | 2026-05-03 | macOS | pending |
+| devpod | primary | age1wa2cuua5lfj26he6qrjrywdvqk3twvyhevfngfzy76ztxj5ex3xs454cgp | xs454cgp | 2026-05-04 | DevPod | active |
+| macbook | escrow | age1kre65j3v87d0cru8tkj6g6s2823yncw78qcvu6y2m7h8umxxny6qpupzvq | 6qpupzvq | 2026-05-04 | macOS | active |
 
 ## Retired Hosts (kept for audit trail; NOT compared by verify script)
 
