@@ -1,0 +1,30 @@
+# .age-recipients.yaml — canonical source-of-truth for chezmoi-managed age recipients.
+#
+# Plan 14-15 closes 14-REVIEW WR-05: hardcoded `age1...` strings inside
+# `.chezmoi.yaml.tmpl` left no in-file pointer back to which host owned which
+# key, so an operator rotating the macbook escrow key edited an opaque body
+# and discovered mismatches only at next-decrypt time.
+#
+# This file is the SINGLE source of truth for the active recipient set.
+# `.chezmoi.yaml.tmpl` reads it via `include + fromYaml` and renders the
+# `recipients:` list at apply time. `scripts/verify-recipients.sh` does a
+# structural compare of `active[].pubkey` against `docs/AUTHORIZED-HOSTS.md`
+# active tier, so a typo or stale entry trips before the next chezmoi apply.
+#
+# Operator rotation procedure (post-Plan 14-15):
+#   1. Edit `.age-recipients.yaml` — change pubkey for the rotating host.
+#   2. Update `docs/AUTHORIZED-HOSTS.md` row matching the host name.
+#   3. Run `chezmoi apply --dry-run` — verify no diff outside the recipient.
+#   4. `bash scripts/verify-recipients.sh` — exit 0 confirms invariant holds.
+#   5. Commit + push. (Public repo: no AI/vendor attribution per ADR-009 scope.)
+#
+# Bidirectional invariant: `scripts/verify-recipients.sh` asserts
+# `.age-recipients.yaml::active[].pubkey` matches `docs/AUTHORIZED-HOSTS.md`
+# active-tier rows.
+active:
+  - name: devpod-primary
+    role: daily-use
+    pubkey: age1wa2cuua5lfj26he6qrjrywdvqk3twvyhevfngfzy76ztxj5ex3xs454cgp
+  - name: macbook-escrow
+    role: NIST-SP-800-57-physically-separate
+    pubkey: age1kre65j3v87d0cru8tkj6g6s2823yncw78qcvu6y2m7h8umxxny6qpupzvq
