@@ -28,3 +28,6 @@ active:
   - name: macbook-escrow
     role: NIST-SP-800-57-physically-separate
     pubkey: age1kre65j3v87d0cru8tkj6g6s2823yncw78qcvu6y2m7h8umxxny6qpupzvq
+  - name: devpod-secondary
+    role: secondary-escrow
+    pubkey: age1jzz8f3q4pgntfenjlrg5kjvyladcplnah0w88f7cvxkryy49jfvqc86903
