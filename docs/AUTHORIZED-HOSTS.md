@@ -17,6 +17,7 @@ The invariant is enforced bidirectionally by `scripts/verify-recipients.sh` — 
 |----------|------|--------|-------------|-------------|-----------|-----|
 | devpod | primary | age1wa2cuua5lfj26he6qrjrywdvqk3twvyhevfngfzy76ztxj5ex3xs454cgp | xs454cgp | 2026-05-04 | DevPod | active |
 | macbook | escrow | age1kre65j3v87d0cru8tkj6g6s2823yncw78qcvu6y2m7h8umxxny6qpupzvq | 6qpupzvq | 2026-05-04 | macOS | active |
+| devpod-secondary | secondary-escrow | age1jzz8f3q4pgntfenjlrg5kjvyladcplnah0w88f7cvxkryy49jfvqc86903 | qc86903 | 2026-05-07 | DevPod | active |
 
 ## Retired Hosts (kept for audit trail; NOT compared by verify script)
 
