@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  dotfiles/private_Library/private_LaunchAgents/com.rtxnik.ws-vault-watcher.plist.tmpl
+  Phase 19 Plan 19-04 Wave 4 Task 1 — chezmoi-managed launchd LaunchAgent per CONTEXT D-22.
+  ADR-flow-03 §Daemon Architecture; RESEARCH §A5 ThrottleInterval=10 (rate-limit relaunch on crash).
+  chezmoi private_ prefix per attribute table at https://www.chezmoi.io/reference/source-state-attributes/
+  Verified live 2026-05-10: chezmoi target-path renders to ~/Library/LaunchAgents/com.rtxnik.ws-vault-watcher.plist
+  (NOT ~/private_Library/private_LaunchAgents/...; private_ prefix is metadata-only, stripped on apply).
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.rtxnik.ws-vault-watcher</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ .chezmoi.homeDir }}/projects/vault-ai/scripts/sibling-watcher/build/ws-vault-watcher</string>
+        <string>--config</string>
+        <string>{{ .chezmoi.homeDir }}/projects/vault-ai/_tooling/sibling-watcher/config.yaml</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>{{ .chezmoi.homeDir }}/Library/Logs/ws-vault-watcher.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{ .chezmoi.homeDir }}/Library/Logs/ws-vault-watcher.err</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>VAULT_AI_TOKEN_FILE</key>
+        <string>{{ .chezmoi.homeDir }}/.config/vault-ai/token</string>
+    </dict>
+</dict>
+</plist>

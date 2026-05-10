@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# dotfiles/run_onchange_after_install-watcher-hooks.sh.tmpl
+# Phase 19 Plan 19-04 Wave 4 Task 1 — chezmoi run_onchange script per CONTEXT D-23
+# + RESEARCH §Open Question #2 (chezmoi run_onchange triggered on content-hash change).
+#
+# Triggered by `chezmoi apply` when this script's rendered content hash changes.
+# Invokes the vault-ai-side install-hooks.sh which lands the bash post-commit hook
+# in each of the 4 sibling repos' .git/hooks/. Idempotent on the install-hooks.sh
+# side (cmp -s + skip when current).
+#
+# chezmoi v2 source-state-attributes: filename `run_onchange_after_install-watcher-hooks.sh.tmpl`
+# decomposes as `run_onchange_after_<name>.sh` rendered from a `.tmpl` source. The leading
+# `run_onchange_` triggers chezmoi run_onchange semantics; `.tmpl` enables Go template
+# rendering; rendered output filename strips `.tmpl` suffix. Source-file executable bit
+# (chmod 0755) is preserved on apply.
+#
+# Refs: WATCH-08 (cross-platform deploy), D-23 (DevPod activation), D-32 (cross-3-repo
+# atomic choreography), feedback_verify_before_claim (mkdir -p discipline applied at
+# Plan 19-04 Task 1).
+
+set -euo pipefail
+
+INSTALLER="{{ .chezmoi.homeDir }}/projects/vault-ai/scripts/sibling-watcher/install-hooks.sh"
+
+if [ -x "$INSTALLER" ]; then
+    echo "[run_onchange] invoking $INSTALLER"
+    "$INSTALLER"
+else
+    echo "WARN: $INSTALLER missing or non-executable; skipping post-commit hook install" >&2
+    echo "WARN: re-run after Phase 19 vault-ai land: chezmoi apply" >&2
+    exit 0
+fi

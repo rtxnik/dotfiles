@@ -1,0 +1,23 @@
+# dotfiles/dot_config/systemd/user/ws-vault-watcher.service.tmpl
+# Phase 19 Plan 19-04 Wave 4 Task 1 — chezmoi-managed systemd-user unit per CONTEXT D-21.
+# ADR-flow-03 §Daemon Architecture defines deployment unit shape; this template ships the
+# Linux side (launchd plist sibling lives at private_Library/private_LaunchAgents/).
+# chezmoi target path (verified live 2026-05-10): ~/.config/systemd/user/ws-vault-watcher.service
+
+[Unit]
+Description=ws-vault-watcher sibling-watcher daemon (Phase 19)
+Documentation=https://github.com/rtxnik/vault-ai/blob/main/docs/adr/adr-flow-03-sibling-watcher.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ .chezmoi.homeDir }}/projects/vault-ai/scripts/sibling-watcher/build/ws-vault-watcher --config {{ .chezmoi.homeDir }}/projects/vault-ai/_tooling/sibling-watcher/config.yaml
+Restart=on-failure
+RestartSec=30s
+StandardOutput=journal
+StandardError=journal
+Environment=VAULT_AI_TOKEN_FILE={{ .chezmoi.homeDir }}/.config/vault-ai/token
+
+[Install]
+WantedBy=default.target
