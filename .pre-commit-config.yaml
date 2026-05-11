@@ -3,8 +3,8 @@
 #
 # Pre-commit framework config for rtxnik/dotfiles.
 # Workspace-blessed framework (vault-ai Plan 04 6-hook family precedent).
-# CLAUDE.md "hooks are bash-only" applies to hook payload scripts; pre-commit
-# as a runner that delegates to the gitleaks binary (Go) is consistent.
+# The workspace "hooks are bash-only" rule applies to hook payload scripts;
+# pre-commit as a runner that delegates to the gitleaks binary (Go) is consistent.
 
 repos:
   - repo: https://github.com/gitleaks/gitleaks
