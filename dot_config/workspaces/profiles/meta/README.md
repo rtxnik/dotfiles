@@ -8,7 +8,7 @@ infrastructure in a single DevPod container.
 | Repository | Purpose |
 |------------|---------|
 | `dotfiles` | chezmoi-managed dotfiles and workspace profiles |
-| `workflow-kit` | Bash/Node framework wrapping Claude Code |
+| `workflow-kit` | Bash/Node framework wrapping the agentic CLI |
 | `workspace-cli` | Go CLI for DevPod workspace management |
 | `vault` | Obsidian vault (planned, not yet created) |
 
