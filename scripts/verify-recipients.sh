@@ -64,19 +64,25 @@ allowlist_active=$(awk -F '|' '
   in_table && /^[^|]/ { in_table=0 }
 ' "$ALLOWLIST" | sort -u)
 
-# Bidirectional diff via comm.
-orphan_in_sot=$(comm -23 <(echo "$sot_keys") <(echo "$allowlist_active") | grep -v '^$' || true)
-missing_from_sot=$(comm -13 <(echo "$sot_keys") <(echo "$allowlist_active") | grep -v '^$' || true)
+# Bidirectional diff via comm. SoT-relative terminology (Plan 21b WR-04
+# wording swap): "extra" = present in SoT but absent from active tier;
+# "absent" = declared active in AUTHORIZED-HOSTS.md but missing from SoT.
+# The earlier "orphan/missing" wording was ambiguous about which side is
+# the SoT -- operators consistently mis-read it. extra/absent makes the
+# direction unambiguous (both adjectives describe the SoT relative to
+# the active tier).
+extra_in_sot=$(comm -23 <(echo "$sot_keys") <(echo "$allowlist_active") | grep -v '^$' || true)
+absent_from_sot=$(comm -13 <(echo "$sot_keys") <(echo "$allowlist_active") | grep -v '^$' || true)
 
 fail=0
-if [ -n "$orphan_in_sot" ]; then
-  printf 'FAIL: orphan recipients in %s (not in %s active tier):\n%s\n\n' \
-    "$RECIPIENTS_YAML" "$ALLOWLIST" "$orphan_in_sot" >&2
+if [ -n "$extra_in_sot" ]; then
+  printf 'FAIL: extra recipients in %s (not in %s active tier):\n%s\n\n' \
+    "$RECIPIENTS_YAML" "$ALLOWLIST" "$extra_in_sot" >&2
   fail=1
 fi
-if [ -n "$missing_from_sot" ]; then
-  printf 'FAIL: active hosts missing from %s (declared active in %s but no recipient):\n%s\n\n' \
-    "$RECIPIENTS_YAML" "$ALLOWLIST" "$missing_from_sot" >&2
+if [ -n "$absent_from_sot" ]; then
+  printf 'FAIL: active hosts absent from %s (declared active in %s but no recipient):\n%s\n\n' \
+    "$RECIPIENTS_YAML" "$ALLOWLIST" "$absent_from_sot" >&2
   fail=1
 fi
 
