@@ -1,0 +1,20 @@
+# .chezmoiignore -- paths chezmoi must NEVER copy from source to target.
+#
+# Format: gitignore-style globs.  Each entry references the chezmoi source path
+# (which mirrors the target home-directory path with a `dot_` prefix on hidden
+# entries).  Comments document the invariant being preserved and link the
+# binding contract.
+
+# --------------------------------------------------------------------------
+# BWS state cache (ADR-sec-05 §M2 backup-exclusion invariant)
+# --------------------------------------------------------------------------
+# The Bitwarden Secrets Manager CLI maintains an encrypted auth-handshake cache
+# at ~/.config/bws/state/ to reduce rate-limit pressure.  Per ADR-sec-05 §M2,
+# the cache must NOT be backed up or carried across machines:
+#   - Cache contents are encrypted under a key derived from BWS_ACCESS_TOKEN.
+#     After a token rotation (ADR-sec-05 §M3), the old cache is unusable
+#     under the new derived key -- restoring it from backup yields garbage.
+#   - State rehydrates lazily from server on first call after restore (§M5).
+#
+# Binding contract: vault-ai/docs/adr/adr-sec-05-bws-replaces-1password.md §M2.
+dot_config/bws/state
