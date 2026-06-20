@@ -16,10 +16,17 @@ RUN apt-get update \
     && curl -fsSL \
        "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${XRAY_ARCH}.zip" \
        -o /tmp/xray.zip \
+    && curl -fsSL \
+       "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${XRAY_ARCH}.zip.dgst" \
+       -o /tmp/xray.zip.dgst \
+    && EXPECT=$(grep -ioE 'sha2-256[^0-9a-f]*[0-9a-f]{64}' /tmp/xray.zip.dgst | grep -oiE '[0-9a-f]{64}' | head -1) \
+    && ACTUAL=$(sha256sum /tmp/xray.zip | awk '{print $1}') \
+    && [ -n "$EXPECT" ] && [ "$EXPECT" = "$ACTUAL" ] \
+       || { echo "xray-core checksum mismatch: expected=$EXPECT actual=$ACTUAL" >&2; exit 1; } \
     && unzip /tmp/xray.zip -d /tmp/xray \
     && mv /tmp/xray/xray /usr/local/bin/xray \
     && chmod +x /usr/local/bin/xray \
-    && rm -rf /tmp/xray /tmp/xray.zip
+    && rm -rf /tmp/xray /tmp/xray.zip /tmp/xray.zip.dgst
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
