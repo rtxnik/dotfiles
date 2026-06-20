@@ -27,6 +27,11 @@ ip route add local default dev lo table $TABLE
 # --- mangle PREROUTING: TPROXY forwarded dev-container traffic ---
 iptables -t mangle -N XRAY
 for net in "${PRIVATE[@]}"; do iptables -t mangle -A XRAY -d "$net" -j RETURN; done
+# Established flows already owned by a local transparent socket bypass re-TPROXY.
+# Guarded: if the xt_socket module is unavailable the rule is skipped and we fall
+# back to plain TPROXY (still correct), never aborting startup.
+iptables -t mangle -A XRAY -p tcp -m socket -j RETURN 2>/dev/null || true
+iptables -t mangle -A XRAY -p udp -m socket -j RETURN 2>/dev/null || true
 iptables -t mangle -A XRAY -p tcp -j TPROXY --on-port $PORT --tproxy-mark $MARK
 iptables -t mangle -A XRAY -p udp -j TPROXY --on-port $PORT --tproxy-mark $MARK
 iptables -t mangle -A PREROUTING -j XRAY
@@ -42,7 +47,7 @@ iptables -t nat -A OUTPUT -p tcp -j XRAY_OUT
 #     IPv6 so dev-container v6 egress cannot leak around the v4 TPROXY capture.
 #     Guarded so a container without ip6tables still starts. ---
 if command -v ip6tables >/dev/null 2>&1; then
-    ip6tables -C FORWARD -j DROP 2>/dev/null || ip6tables -A FORWARD -j DROP || true
+    ip6tables -C FORWARD -j DROP 2>/dev/null || ip6tables -I FORWARD -j DROP || true
 fi
 
 # --- verify ---
