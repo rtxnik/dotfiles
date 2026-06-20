@@ -38,6 +38,13 @@ for net in "${PRIVATE[@]}"; do iptables -t nat -A XRAY_OUT -d "$net" -j RETURN; 
 iptables -t nat -A XRAY_OUT -p tcp -j REDIRECT --to-ports $PORT
 iptables -t nat -A OUTPUT -p tcp -j XRAY_OUT
 
+# --- IPv6: this transparent proxy is IPv4-only. Fail closed: drop forwarded
+#     IPv6 so dev-container v6 egress cannot leak around the v4 TPROXY capture.
+#     Guarded so a container without ip6tables still starts. ---
+if command -v ip6tables >/dev/null 2>&1; then
+    ip6tables -C FORWARD -j DROP 2>/dev/null || ip6tables -A FORWARD -j DROP || true
+fi
+
 # --- verify ---
 iptables -t mangle -L XRAY -n >/dev/null 2>&1 && iptables -t nat -L XRAY_OUT -n >/dev/null 2>&1 \
   && echo "iptables applied (mangle PREROUTING TPROXY + nat OUTPUT REDIRECT)" \
