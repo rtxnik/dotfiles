@@ -1,63 +1,53 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Transparent proxy entrypoint
-# Sets up iptables NAT rules and starts xray as the xray user
+# Transparent proxy entrypoint (hybrid TPROXY)
+#  - dev-container (forwarded) traffic : mangle PREROUTING TPROXY (tcp + udp)
+#  - proxy's own egress (healthcheck)  : nat OUTPUT REDIRECT (tcp), uid xray bypassed
+# Fail-closed: TPROXY to a non-listening xray drops; 'direct' outbound is private-only.
 # =============================================================================
-
 set -euo pipefail
 
-# --- iptables NAT rules ---
-#
-# On container restart Docker reuses the network namespace, so any rules
-# from the previous run persist. Clean up before re-applying to keep the
-# entrypoint idempotent (otherwise `-N XRAY` fails with "Chain already
-# exists" and `set -e` aborts the whole startup).
+MARK=1
+TABLE=100
+PORT=12345
+PRIVATE=(10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.0/8 169.254.0.0/16 224.0.0.0/4)
 
-# Detach XRAY from OUTPUT/PREROUTING if previously attached, then flush
-# and drop the chain so we can recreate it from scratch.
-while iptables -t nat -D OUTPUT -j XRAY 2>/dev/null; do :; done
-while iptables -t nat -D PREROUTING -j XRAY 2>/dev/null; do :; done
-iptables -t nat -D OUTPUT -p tcp -m owner --uid-owner xray -j RETURN 2>/dev/null || true
-iptables -t nat -D OUTPUT -p udp -m owner --uid-owner xray -j RETURN 2>/dev/null || true
-iptables -t nat -F XRAY 2>/dev/null || true
-iptables -t nat -X XRAY 2>/dev/null || true
+# --- idempotent cleanup (Docker reuses the netns across restarts) ---
+while iptables -t mangle -D PREROUTING -j XRAY 2>/dev/null; do :; done
+while iptables -t nat    -D OUTPUT    -j XRAY_OUT 2>/dev/null; do :; done
+iptables -t mangle -F XRAY 2>/dev/null || true; iptables -t mangle -X XRAY 2>/dev/null || true
+iptables -t nat    -F XRAY_OUT 2>/dev/null || true; iptables -t nat -X XRAY_OUT 2>/dev/null || true
+ip rule del fwmark $MARK lookup $TABLE 2>/dev/null || true
+ip route flush table $TABLE 2>/dev/null || true
 
-iptables -t nat -N XRAY
+# --- policy routing: deliver marked, foreign-destined packets to the local TPROXY socket ---
+ip rule add fwmark $MARK lookup $TABLE
+ip route add local default dev lo table $TABLE
 
-# Skip private networks (direct connection)
-iptables -t nat -A XRAY -d 10.0.0.0/8 -j RETURN
-iptables -t nat -A XRAY -d 172.16.0.0/12 -j RETURN
-iptables -t nat -A XRAY -d 192.168.0.0/16 -j RETURN
-iptables -t nat -A XRAY -d 127.0.0.0/8 -j RETURN
+# --- mangle PREROUTING: TPROXY forwarded dev-container traffic ---
+iptables -t mangle -N XRAY
+for net in "${PRIVATE[@]}"; do iptables -t mangle -A XRAY -d "$net" -j RETURN; done
+iptables -t mangle -A XRAY -p tcp -j TPROXY --on-port $PORT --tproxy-mark $MARK
+iptables -t mangle -A XRAY -p udp -j TPROXY --on-port $PORT --tproxy-mark $MARK
+iptables -t mangle -A PREROUTING -j XRAY
 
-# Redirect all remaining TCP and UDP to xray dokodemo-door
-iptables -t nat -A XRAY -p tcp -j REDIRECT --to-ports 12345
-iptables -t nat -A XRAY -p udp -j REDIRECT --to-ports 12345
+# --- nat OUTPUT: REDIRECT the proxy's OWN tcp egress (healthcheck), skip xray's tunnel ---
+iptables -t nat -N XRAY_OUT
+iptables -t nat -A XRAY_OUT -m owner --uid-owner xray -j RETURN
+for net in "${PRIVATE[@]}"; do iptables -t nat -A XRAY_OUT -d "$net" -j RETURN; done
+iptables -t nat -A XRAY_OUT -p tcp -j REDIRECT --to-ports $PORT
+iptables -t nat -A OUTPUT -p tcp -j XRAY_OUT
 
-# Apply to OUTPUT for proxy's own traffic (skip xray user to prevent loops)
-iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner xray -j RETURN
-iptables -t nat -A OUTPUT -p udp -m owner --uid-owner xray -j RETURN
-iptables -t nat -A OUTPUT -j XRAY
+# --- verify ---
+iptables -t mangle -L XRAY -n >/dev/null 2>&1 && iptables -t nat -L XRAY_OUT -n >/dev/null 2>&1 \
+  && echo "iptables applied (mangle PREROUTING TPROXY + nat OUTPUT REDIRECT)" \
+  || { echo "ERROR: iptables rules failed to apply" >&2; exit 1; }
 
-# Apply to PREROUTING for traffic from workspace containers on bridge network
-iptables -t nat -A PREROUTING -j XRAY
-
-# Verify iptables rules were applied
-if iptables -t nat -L XRAY -n >/dev/null 2>&1; then
-    echo "iptables rules applied (OUTPUT + PREROUTING)"
-else
-    echo "ERROR: iptables rules failed to apply" >&2
-    exit 1
-fi
-
-# --- Start xray ---
-
-# Validate config before starting
+# --- validate + start xray ---
 if ! su -s /bin/sh xray -c "xray run -test -c /etc/xray/config.json" >/dev/null 2>&1; then
     echo "ERROR: xray config validation failed" >&2
     su -s /bin/sh xray -c "xray run -test -c /etc/xray/config.json" >&2
     exit 1
 fi
 echo "xray config validated"
-
 exec su -s /bin/sh xray -c "xray run -c /etc/xray/config.json"
