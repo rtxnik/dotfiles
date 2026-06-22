@@ -36,16 +36,23 @@ ip route add local default dev lo table $TABLE
 #     processed as local input), so forwarded traffic silently fails even though
 #     the REDIRECT'd healthcheck works. Effective rp_filter is max(all, <iface>),
 #     so clear every conf entry. Namespaced + writable with NET_ADMIN; guarded. ---
-for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 0 > "$f" 2>/dev/null || true; done
+for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 0 2>/dev/null > "$f" || true; done
 
 # --- mangle PREROUTING: TPROXY forwarded dev-container traffic ---
 iptables -t mangle -N XRAY
 for net in "${PRIVATE[@]}"; do iptables -t mangle -A XRAY -d "$net" -j RETURN; done
-# Established flows already owned by a local transparent socket bypass re-TPROXY.
-# Guarded: if the xt_socket module is unavailable the rule is skipped and we fall
-# back to plain TPROXY (still correct), never aborting startup.
-iptables -t mangle -A XRAY -p tcp -m socket -j RETURN 2>/dev/null || true
-iptables -t mangle -A XRAY -p udp -m socket -j RETURN 2>/dev/null || true
+# Established flows already owned by a local transparent socket: MARK them so the
+# policy route delivers them back to that socket, then RETURN to skip re-TPROXY.
+# The MARK is essential — a bare RETURN leaves the packet unmarked, so it misses
+# the fwmark rule, gets routed by destination and (with ip_forward=1) forwarded to
+# the real upstream. The client's handshake then completes via TPROXY on the SYN
+# but its data never reaches xray, so the connection stalls right after connect.
+# Guarded: if the xt_socket module is unavailable these are skipped and we fall
+# back to plain TPROXY for every packet (still correct), never aborting startup.
+for proto in tcp udp; do
+    iptables -t mangle -A XRAY -p $proto -m socket -j MARK --set-mark $MARK 2>/dev/null \
+        && iptables -t mangle -A XRAY -p $proto -m socket -j RETURN 2>/dev/null || true
+done
 iptables -t mangle -A XRAY -p tcp -j TPROXY --on-port $PORT --tproxy-mark $MARK
 iptables -t mangle -A XRAY -p udp -j TPROXY --on-port $PORT --tproxy-mark $MARK
 iptables -t mangle -A PREROUTING -j XRAY
