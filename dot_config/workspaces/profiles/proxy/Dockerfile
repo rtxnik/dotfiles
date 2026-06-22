@@ -4,7 +4,7 @@ ARG XRAY_VERSION=v26.2.6
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ca-certificates curl unzip iptables iproute2 \
+       ca-certificates curl unzip iptables iproute2 libcap2-bin \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -r -s /usr/sbin/nologin xray \
     && ARCH=$(dpkg --print-architecture) \
@@ -26,6 +26,12 @@ RUN apt-get update \
     && unzip /tmp/xray.zip -d /tmp/xray \
     && mv /tmp/xray/xray /usr/local/bin/xray \
     && chmod +x /usr/local/bin/xray \
+    # xray runs as the unprivileged "xray" user, but the TPROXY inbound needs
+    # IP_TRANSPARENT, which requires CAP_NET_ADMIN. A file capability grants it on
+    # exec without running xray as root, so the iptables --uid-owner xray bypass
+    # (healthcheck loop prevention) still works. Without this, forwarded TPROXY
+    # traffic is captured by iptables but never accepted by xray -> SYN timeouts.
+    && setcap 'cap_net_admin+ep' /usr/local/bin/xray \
     && rm -rf /tmp/xray /tmp/xray.zip /tmp/xray.zip.dgst
 
 COPY entrypoint.sh /entrypoint.sh
