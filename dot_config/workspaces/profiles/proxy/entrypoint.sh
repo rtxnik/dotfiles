@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
 # =============================================================================
 # Transparent proxy entrypoint (hybrid TPROXY)
-#  - dev-container (forwarded) traffic : mangle PREROUTING TPROXY (tcp + udp)
-#  - proxy's own egress (healthcheck)  : nat OUTPUT REDIRECT (tcp), uid xray bypassed
+#  - dev-container (forwarded) traffic : mangle PREROUTING TPROXY (tcp + udp) -> :12345
+#  - proxy's own egress (healthcheck)  : nat OUTPUT REDIRECT (tcp) -> :12346, uid xray bypassed
+# The two captures MUST land on separate xray inbounds: the TPROXY inbound runs
+# in tproxy mode (IP_TRANSPARENT) and reads the destination from the socket, while
+# a nat REDIRECT'd connection has its destination rewritten and is recovered via
+# SO_ORIGINAL_DST. Pointing REDIRECT at the tproxy inbound makes xray resolve the
+# destination to its own listen address -> "loopback connection detected".
 # Fail-closed: TPROXY to a non-listening xray drops; 'direct' outbound is private-only.
 # =============================================================================
 set -euo pipefail
 
 MARK=1
 TABLE=100
-PORT=12345
+PORT=12345        # TPROXY: forwarded dev-container traffic (tproxy inbound)
+HEALTH_PORT=12346 # nat REDIRECT: proxy's own healthcheck/test egress (plain inbound)
 PRIVATE=(10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.0/8 169.254.0.0/16 224.0.0.0/4)
 
 # --- idempotent cleanup (Docker reuses the netns across restarts) ---
@@ -36,11 +42,13 @@ iptables -t mangle -A XRAY -p tcp -j TPROXY --on-port $PORT --tproxy-mark $MARK
 iptables -t mangle -A XRAY -p udp -j TPROXY --on-port $PORT --tproxy-mark $MARK
 iptables -t mangle -A PREROUTING -j XRAY
 
-# --- nat OUTPUT: REDIRECT the proxy's OWN tcp egress (healthcheck), skip xray's tunnel ---
+# --- nat OUTPUT: REDIRECT the proxy's OWN tcp egress (healthcheck) to the plain
+#     dokodemo inbound on $HEALTH_PORT, skip xray's tunnel. Must NOT target the
+#     tproxy inbound ($PORT) or SO_ORIGINAL_DST resolves to the listener -> loop. ---
 iptables -t nat -N XRAY_OUT
 iptables -t nat -A XRAY_OUT -m owner --uid-owner xray -j RETURN
 for net in "${PRIVATE[@]}"; do iptables -t nat -A XRAY_OUT -d "$net" -j RETURN; done
-iptables -t nat -A XRAY_OUT -p tcp -j REDIRECT --to-ports $PORT
+iptables -t nat -A XRAY_OUT -p tcp -j REDIRECT --to-ports $HEALTH_PORT
 iptables -t nat -A OUTPUT -p tcp -j XRAY_OUT
 
 # --- IPv6: this transparent proxy is IPv4-only. Fail closed: drop forwarded

@@ -4,7 +4,7 @@ ARG XRAY_VERSION=v26.2.6
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ca-certificates curl unzip iptables \
+       ca-certificates curl unzip iptables iproute2 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -r -s /usr/sbin/nologin xray \
     && ARCH=$(dpkg --print-architecture) \
