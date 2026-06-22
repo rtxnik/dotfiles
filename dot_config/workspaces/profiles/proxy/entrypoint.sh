@@ -30,6 +30,14 @@ ip route flush table $TABLE 2>/dev/null || true
 ip rule add fwmark $MARK lookup $TABLE
 ip route add local default dev lo table $TABLE
 
+# --- disable reverse-path filtering: TPROXY delivers forwarded dev-container
+#     packets locally via the policy route above. With strict rp_filter the kernel
+#     drops them (source is a peer container reachable via eth0, but the packet is
+#     processed as local input), so forwarded traffic silently fails even though
+#     the REDIRECT'd healthcheck works. Effective rp_filter is max(all, <iface>),
+#     so clear every conf entry. Namespaced + writable with NET_ADMIN; guarded. ---
+for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 0 > "$f" 2>/dev/null || true; done
+
 # --- mangle PREROUTING: TPROXY forwarded dev-container traffic ---
 iptables -t mangle -N XRAY
 for net in "${PRIVATE[@]}"; do iptables -t mangle -A XRAY -d "$net" -j RETURN; done
