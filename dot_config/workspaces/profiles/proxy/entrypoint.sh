@@ -20,13 +20,34 @@ iptables -t nat    -F XRAY_OUT 2>/dev/null || true; iptables -t nat -X XRAY_OUT 
 ip rule del fwmark $MARK lookup $TABLE 2>/dev/null || true
 ip route flush table $TABLE 2>/dev/null || true
 
-# --- kernel preconditions for TPROXY: disable reverse-path filtering and allow
-#     routing of foreign-destined packets to the local (lo) transparent socket.
-#     Per-interface because the effective rp_filter is max(conf.all, conf.<iface>).
-#     No `|| true`: a failed write here means the datapath would silently drop
-#     traffic, so we fail closed (set -euo pipefail aborts startup). ---
-for f in /proc/sys/net/ipv4/conf/*/rp_filter;      do echo 0 > "$f"; done
-for f in /proc/sys/net/ipv4/conf/*/route_localnet; do echo 1 > "$f"; done
+# --- kernel preconditions for TPROXY: reverse-path filtering OFF and
+#     route_localnet ON so marked, foreign-destined packets reach the local (lo)
+#     transparent socket. Per-interface because the effective rp_filter is
+#     max(conf.all, conf.<iface>), so every interface must read 0.
+#
+#     /proc/sys is mounted read-only inside a default container (runc's default
+#     readonlyPaths), so these writes can fail with EROFS even when the values
+#     are already correct: the proxy runtime supplies them declaratively via
+#     `docker --sysctl` (see workspace-cli internal/docker/docker.go — note `lo`
+#     pre-exists the sysctl pass so it needs explicit lo.* entries; eth0 inherits
+#     default.*). We therefore write best-effort and then ASSERT the effective
+#     state, failing closed only when a value is genuinely wrong (a real
+#     silent-drop risk), not merely because /proc/sys is read-only. ---
+for f in /proc/sys/net/ipv4/conf/*/rp_filter;      do echo 0 > "$f" 2>/dev/null || true; done
+for f in /proc/sys/net/ipv4/conf/*/route_localnet; do echo 1 > "$f" 2>/dev/null || true; done
+
+sysctl_bad=""
+for f in /proc/sys/net/ipv4/conf/*/rp_filter; do
+    [ "$(cat "$f")" = 0 ] || sysctl_bad="${sysctl_bad} ${f#/proc/sys/}=$(cat "$f")(want 0)"
+done
+for f in /proc/sys/net/ipv4/conf/*/route_localnet; do
+    [ "$(cat "$f")" = 1 ] || sysctl_bad="${sysctl_bad} ${f#/proc/sys/}=$(cat "$f")(want 1)"
+done
+if [ -n "$sysctl_bad" ]; then
+    echo "ERROR: TPROXY sysctl preconditions unmet (read-only /proc/sys and not supplied via 'docker --sysctl'):${sysctl_bad}" >&2
+    exit 1
+fi
+echo "tproxy sysctls verified (rp_filter=0, route_localnet=1 on all interfaces)"
 
 # --- policy routing: deliver marked, foreign-destined packets to the local TPROXY socket ---
 ip rule add fwmark $MARK lookup $TABLE
