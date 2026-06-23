@@ -1,2 +1,3 @@
 timestamp	files	outcome	gate_result	notes
 2026-06-23T00:00:00Z	dot_config/workspaces/profiles/proxy/Dockerfile	kept	no local docker; build-time getcap assert deferred to CI	setcap cap_net_admin file-caps for xray + libcap2-bin/iproute2; discarded alternatives: ambient capsh, run-as-root
+2026-06-23T10:54:03Z	dot_config/workspaces/profiles/proxy/entrypoint.sh	kept	bash -n clean; no local docker	per-iface rp_filter=0 + route_localnet=1 in entrypoint (C2 defense-in-depth half), no || true fail-closed

@@ -20,6 +20,14 @@ iptables -t nat    -F XRAY_OUT 2>/dev/null || true; iptables -t nat -X XRAY_OUT 
 ip rule del fwmark $MARK lookup $TABLE 2>/dev/null || true
 ip route flush table $TABLE 2>/dev/null || true
 
+# --- kernel preconditions for TPROXY: disable reverse-path filtering and allow
+#     routing of foreign-destined packets to the local (lo) transparent socket.
+#     Per-interface because the effective rp_filter is max(conf.all, conf.<iface>).
+#     No `|| true`: a failed write here means the datapath would silently drop
+#     traffic, so we fail closed (set -euo pipefail aborts startup). ---
+for f in /proc/sys/net/ipv4/conf/*/rp_filter;      do echo 0 > "$f"; done
+for f in /proc/sys/net/ipv4/conf/*/route_localnet; do echo 1 > "$f"; done
+
 # --- policy routing: deliver marked, foreign-destined packets to the local TPROXY socket ---
 ip rule add fwmark $MARK lookup $TABLE
 ip route add local default dev lo table $TABLE
