@@ -4,7 +4,7 @@ ARG XRAY_VERSION=v26.2.6
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ca-certificates curl unzip iptables \
+       ca-certificates curl unzip iptables libcap2-bin iproute2 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -r -s /usr/sbin/nologin xray \
     && ARCH=$(dpkg --print-architecture) \
@@ -26,6 +26,9 @@ RUN apt-get update \
     && unzip /tmp/xray.zip -d /tmp/xray \
     && mv /tmp/xray/xray /usr/local/bin/xray \
     && chmod +x /usr/local/bin/xray \
+    && setcap cap_net_admin+ep /usr/local/bin/xray \
+    && getcap /usr/local/bin/xray | grep -q cap_net_admin \
+       || { echo "setcap failed: xray has no cap_net_admin (nosuid/no-xattr fs?)" >&2; exit 1; } \
     && rm -rf /tmp/xray /tmp/xray.zip /tmp/xray.zip.dgst
 
 COPY entrypoint.sh /entrypoint.sh
