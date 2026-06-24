@@ -1,0 +1,32 @@
+#!/bin/sh
+# Verified install of the workspace-cli `ws` binary (SP-2 / audit H9). Replaces
+# the prior unverified `releases/latest` chezmoi external: pins a version and
+# runs the canonical verified installer with --require-signature so a missing or
+# invalid signature is fatal. chezmoi re-runs this script whenever WS_VERSION
+# changes (the script's content hash changes), making upgrades explicit.
+#
+# Trust bootstrap: install.sh is fetched over HTTPS from the pinned release tag;
+# the binary it installs is verified (checksum + minisign) by install.sh itself.
+set -eu
+
+# Bump to upgrade ws. Owner sets this to the first signed release tag.
+WS_VERSION="v0.7.1"
+
+# --require-signature needs minisign present; install it best-effort if missing.
+if ! command -v minisign >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update && sudo apt-get install -y minisign
+    elif command -v brew >/dev/null 2>&1; then
+        brew install minisign
+    else
+        echo "ERROR: minisign required for verified ws install but could not be installed" >&2
+        exit 1
+    fi
+fi
+
+installer="$(mktemp)"
+trap 'rm -f "$installer"' EXIT INT TERM
+
+curl -fsSL "https://raw.githubusercontent.com/rtxnik/workspace-cli/${WS_VERSION}/scripts/install.sh" -o "$installer"
+
+WS_VERSION="$WS_VERSION" PREFIX="${HOME}/.local" sh "$installer" --require-signature
