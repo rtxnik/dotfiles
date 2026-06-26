@@ -90,18 +90,41 @@ iptables -t mangle -A OUTPUT -j XRAY_SELF
 # would silently drop them (XTLS discussion #4039).
 iptables -I INPUT -m mark --mark $MARK -j ACCEPT
 
-# --- IPv6: this transparent proxy is IPv4-only. Fail closed on BOTH legs so
-#     neither forwarded nor the box's own IPv6 egress can leak around the v4
-#     TPROXY capture. OUTPUT: allow loopback + established/related (so replies to
-#     already-allowed flows work), drop everything else the box originates.
-#     Guarded so a container without ip6tables (or without conntrack) still
-#     starts; a missing established-accept only makes v6 MORE fail-closed. ---
+# --- IPv6: this transparent proxy is IPv4-only. Fail closed so neither
+#     forwarded nor the box's own IPv6 egress can leak around the v4 TPROXY
+#     capture. Defense in depth: the IPv6 stack is disabled at container-create
+#     via the HostConfig sysctl net.ipv6.conf.*.disable_ipv6=1 (ws-cli), and the
+#     ip6tables FORWARD/OUTPUT DROP rules below are the belt on top. DROP rules
+#     are load-bearing (no `|| true`); ACCEPT rules tighten-only (a failure makes
+#     v6 MORE fail-closed) so they keep `|| true`. We only READ disable_ipv6 here
+#     -- writing /proc/sys under `set -e` can EROFS-abort on a read-only mount. ---
+v6_disabled=0
+if [ "$(cat /proc/sys/net/ipv6/conf/all/disable_ipv6 2>/dev/null || echo 0)" = "1" ]; then
+    v6_disabled=1
+fi
+
 if command -v ip6tables >/dev/null 2>&1; then
-    ip6tables -C FORWARD -j DROP 2>/dev/null || ip6tables -I FORWARD -j DROP || true
+    # tighten-only ACCEPTs (loopback + reply traffic)
     ip6tables -C OUTPUT -o lo -j ACCEPT 2>/dev/null || ip6tables -I OUTPUT -o lo -j ACCEPT || true
     ip6tables -C OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null \
         || ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT || true
-    ip6tables -C OUTPUT -j DROP 2>/dev/null || ip6tables -A OUTPUT -j DROP || true
+    # load-bearing DROPs: install idempotently; decide fatality by whether v6 is live
+    if ! { ip6tables -C FORWARD -j DROP 2>/dev/null || ip6tables -I FORWARD -j DROP; } \
+       || ! { ip6tables -C OUTPUT -j DROP 2>/dev/null || ip6tables -A OUTPUT -j DROP; }; then
+        if [ "$v6_disabled" = "1" ]; then
+            echo "WARN: ip6tables v6 DROP insert failed, but the IPv6 stack is disabled (disable_ipv6=1) -- still fail-closed" >&2
+        else
+            echo "ERROR: IPv6 is active but ip6tables FORWARD/OUTPUT DROP could not be installed -- refusing to start (v6 leak risk)" >&2
+            exit 1
+        fi
+    fi
+else
+    if [ "$v6_disabled" = "1" ]; then
+        echo "WARN: ip6tables absent; relying on disabled IPv6 stack (disable_ipv6=1) for fail-closed" >&2
+    else
+        echo "ERROR: ip6tables absent and IPv6 is active -- cannot fail-close v6 -- refusing to start" >&2
+        exit 1
+    fi
 fi
 
 # --- verify ---
