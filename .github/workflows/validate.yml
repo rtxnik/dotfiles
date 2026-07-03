@@ -6,12 +6,17 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   scripts:
     name: Shell syntax check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 (resolved 2026-05-03)
+        with:
+          persist-credentials: false
 
       - name: bash -n on all scripts
         shell: bash
@@ -38,6 +43,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 (resolved 2026-05-03)
+        with:
+          persist-credentials: false
 
       - name: Install chezmoi
         run: |
@@ -51,6 +58,9 @@ jobs:
   gitleaks:
     name: gitleaks scan + recipient verify
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout (full history)
         # SHA pin per Phase 13 success criterion 5; v4.2.2 resolved at execution time.
@@ -60,6 +70,7 @@ jobs:
           # gitleaks-action default scans the PR diff; full history needed
           # for the once-per-phase historical audit (CONTEXT.md D-11).
           fetch-depth: 0
+          persist-credentials: false
 
       - name: gitleaks
         # SHA pin per ADR-int-04. v2.3.9 -> ff98106e4c7b2bc287b24eaf42907196329070c7
