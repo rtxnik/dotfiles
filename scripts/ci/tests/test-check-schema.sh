@@ -23,6 +23,16 @@ if [ -z "${CHECK_JSONSCHEMA_CMD:-}" ] && ! command -v pipx >/dev/null 2>&1; then
   exit 0
 fi
 
+# Closure-portability (F7, 2026-07-03 dotfiles canary CI): the consumers.json (cases 4-6)
+# and bundle-manifest (cases 7-9) families exercise SELF-HOST-only schemas; consumer
+# closures ship only the config/lock/overlay schemas. Unguarded, those cases fabricate a
+# tooling/factory/consumers.json (or payload bundle) whose schema the sandbox can't carry,
+# so the gate exits 1 with "missing schema" — a false RED for every positive case and a
+# vacuous (wrong-reason) pass for every negative one. Gate each family on its schema's
+# presence in the live tree; self-host keeps the full run.
+has_consumers_schema=0; [ -f "$SCHEMA_DIR/consumers.schema.json" ] && has_consumers_schema=1
+has_bundle_schema=0;    [ -f "$SCHEMA_DIR/bundle.schema.json" ]    && has_bundle_schema=1
+
 # 1. valid factory.json + factory.lock -> exit 0
 d="$(mkroot)"
 cat > "$d/factory.json" <<'JSON'
@@ -82,6 +92,7 @@ cat > "$d/factory.lock" <<'JSON'
 JSON
 OUT="$(CHECK_ROOT="$d" bash "$SRC" 2>&1)"; assert_rc "bad provenance enum fails" 1 $?
 
+if [ "$has_consumers_schema" -eq 1 ]; then
 # 4. valid consumers.json -> exit 0
 d="$(mkroot)"; mkdir -p "$d/tooling/factory"
 cat > "$d/tooling/factory/consumers.json" <<'JSON'
@@ -102,7 +113,11 @@ cat > "$d/tooling/factory/consumers.json" <<'JSON'
 [ { "repo": "rtxnik/x", "default_branch": "main", "profile_hint": "enormous" } ]
 JSON
 CHECK_ROOT="$d" bash "$SRC" >/dev/null 2>&1; assert_rc "bad profile_hint fails" 1 $?
+else
+  echo "SKIP: consumers.schema.json not in this closure — consumers.json cases (4-6) skipped"
+fi
 
+if [ "$has_bundle_schema" -eq 1 ]; then
 # 7. valid bundle manifest -> exit 0
 d="$(mkroot)"; mkdir -p "$d/payload/bundles/demo"
 cat > "$d/payload/bundles/demo/bundle.json" <<'JSON'
@@ -123,6 +138,9 @@ cat > "$d/payload/bundles/demo/bundle.json" <<'JSON'
 { "schema_version": 1, "name": "demo", "layer": "optional", "paths": [], "bogus": true }
 JSON
 CHECK_ROOT="$d" bash "$SRC" >/dev/null 2>&1; assert_rc "unknown bundle key fails" 1 $?
+else
+  echo "SKIP: bundle.schema.json not in this closure — bundle-manifest cases (7-9) skipped"
+fi
 
 # 10. valid overlay/bundle.toml -> exit 0
 d="$(mkroot)"; mkdir -p "$d/overlay"

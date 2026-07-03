@@ -1,25 +1,25 @@
 {
   "lock_format": 1,
-  "factory_version": "v1.0.1",
+  "factory_version": "v1.0.2",
   "engine_floor": "1.0.0",
-  "source_sha": "7ef26c2c9154688f4e9c899f81ab841a7a632d38",
-  "release_digest": "sha256:5356c891271db548acb24897491a6979849a6ad5d8d0fa952270de3b7aea7ca1",
+  "source_sha": "2da026711147f62cce4a22e33593002e5dfbb215",
+  "release_digest": "sha256:f2ccf2815474d6d16bd4f330117b30a153b77a51203ba0c7c79ed089149af2ee",
   "provenance": {
     "predicate_type": "https://slsa.dev/provenance/v1",
-    "bundle_sha256": "1b4e0bbb6d80787cd71dc74870c26f0bd5c1ddc733c8b74cf237267f90404ea9",
-    "builder_id": "https://github.com/rtxnik/workflow-factory/.github/workflows/release.yml@refs/tags/v1.0.1",
-    "source_sha": "7ef26c2c9154688f4e9c899f81ab841a7a632d38",
+    "bundle_sha256": "b917ab350195f4eb19990048b2cb192d08f53e24228638b9247efd26d2da8bd0",
+    "builder_id": "https://github.com/rtxnik/workflow-factory/.github/workflows/release.yml@refs/tags/v1.0.2",
+    "source_sha": "2da026711147f62cce4a22e33593002e5dfbb215",
     "verified": true,
     "verified_via": "gh-attestation",
     "trusted_root_sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
     "sbom": {
       "asset": "factory-payload.sbom.spdx.json",
-      "sha256": "c2ba8c3de0d1678d4d9cca765b691f32a499e27bed5ff9c818683f5279f62285",
+      "sha256": "8bc2e87a6e006fc1292657a5a70067b3d8c532702836db1121a514ed104fbf06",
       "predicate_type": "https://spdx.dev/Document",
       "bundle_asset": "factory-payload.sbom.spdx.json.sigstore.jsonl",
       "verified": true,
       "verified_via": "gh-attestation",
-      "bundle_sha256": "1736d256c78e6ea1d6a173f99ba17a93f1788ea8ed702692ead13280565b4d52"
+      "bundle_sha256": "8130d1ba8204ff18aab3fecc570d9db0319e4ad4c05de6cf7c5ecfec9320c807"
     }
   },
   "host_prereqs": [
@@ -755,7 +755,7 @@
       "provenance": "base"
     },
     "scripts/ci/tests/test-check-schema.sh": {
-      "sha256": "beb6772a781779902565cd642d1cad2d42e335b34b92da23d716e604d509bbdf",
+      "sha256": "9096fa82cea0280548e9853d81af90ad423aa983ce1e2208bcd9ade41cf34482",
       "capabilities": [
         "enforcement-floor"
       ],
