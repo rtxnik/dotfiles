@@ -1,0 +1,44 @@
+name: fabric-gates
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: fabric-gates-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  gates:
+    name: fabric-gates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install yq (mikefarah v4, SHA-pinned — ci-scripts-test runs the A5 validator tests)
+        uses: ./.github/actions/setup-yq
+      - name: Toolchain sanity (runner image contract)
+        run: |
+          set -euo pipefail
+          shellcheck --version
+          jq --version
+          node --version
+          python3 -c "import yaml"
+      - name: LEDGER gate (hard gate)
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash scripts/ci/check-ledger-gate.sh
+      - name: Hook tests (hard gate)
+        run: make -f Makefile.factory hooks-test
+      - name: Integration checks (hard gate)
+        run: make -f Makefile.factory integration-check
+      - name: CI script tests (hard gate)
+        run: make -f Makefile.factory ci-scripts-test
+      - name: Script tests (hard gate)
+        run: make -f Makefile.factory scripts-test
+      - name: Schema gate (hard gate)
+        run: bash scripts/ci/check-schema.sh

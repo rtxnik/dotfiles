@@ -32,6 +32,13 @@ paths = [
   # Test-fixture corpus for Phase 12. Contains documented-fake AWS-docs example
   # values + age README example keys; non-functional.
   '''tests/fixtures/secrets/''',
+  # Vendored workflow-fabric scanner-test fixtures (factory install, v1.0.1).
+  # Contain documented-fake tokens used to test the hooks' own secret detection;
+  # path allowlist mirrors the upstream workflow-factory repo's own .gitleaks.toml
+  # (directory/history scans only -- the vendored hooks already self-exempt these
+  # paths for stdin scans, where gitleaks reports no File field).
+  '''\.claude/hooks/tests/''',
+  '''scripts/ci/tests/''',
 ]
 regexes = [
   # chezmoi-init placeholder pubkeys in .chezmoi.yaml.tmpl. Pubkeys are not secret

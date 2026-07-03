@@ -1,0 +1,7 @@
+# shellcheck config for the .claude hook fabric.
+# Disable codes that fire only on intentional patterns in these scripts:
+#   SC1083 — literal { } in git revspecs like @{push}/@{upstream}
+#   SC1091 — cannot follow sourced lib path under `-x` (directive supplies it)
+#   SC2034 — vars set for the caller's scope or used inside eval'd assertions
+#   SC2016 — single-quoted assertion strings deliberately unexpanded
+disable=SC1083,SC1091,SC2034,SC2016

@@ -1,0 +1,10 @@
+{
+  "gates": [
+    "check-integration-branch-protection.sh",
+    "check-integration-hooks.sh",
+    "check-integration-mcp.sh",
+    "check-integration-merge-markers.sh",
+    "check-integration-phase4.sh",
+    "check-integration-rubric.sh"
+  ]
+}

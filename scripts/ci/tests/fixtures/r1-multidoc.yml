@@ -1,0 +1,11 @@
+name: doc1
+on: [push]
+permissions:
+  contents: read
+jobs:
+  a: { runs-on: ubuntu-latest, steps: [{ uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' }] }
+---
+name: doc2-no-perms
+on: [push]
+jobs:
+  b: { runs-on: ubuntu-latest, steps: [{ uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' }] }

@@ -1,0 +1,16 @@
+# Dependency-update automation (P4, Finding V). Three ecosystems:
+# - github-actions: SHA-pinned actions across the workflows; Dependabot bumps the
+#   SHA and the trailing `# vX.Y.Z` comment in lockstep (keeps A5 rule R2 green).
+# - uv: tools/workflow-graph/{pyproject.toml,uv.lock} — uv.lock is the single
+#   toolchain pin for CI (graphifyy + pytest live in the PEP-735 dev group).
+# - npm: tools/factory-map — the Svelte build toolchain (Vite/Svelte/Vitest, dev-only);
+#   package-lock.json is the supply-chain pin. Geist fonts are vendored (VENDOR.md
+#   sha256), not an npm runtime dep.
+# Deliberately absent:
+# - MCP/toolbox package pins: not git-tracked in this repo (external plugins cache) — P5.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

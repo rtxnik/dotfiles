@@ -1,0 +1,16 @@
+name: clean
+on: [push]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # per-job write is allowed — R1 must NOT flag this
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: safe interpolation
+        env:
+          TITLE: ${{ github.event.issue.title }}
+        run: echo "$TITLE"

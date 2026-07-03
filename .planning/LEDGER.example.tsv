@@ -1,0 +1,3 @@
+date	area	tried	verdict	why / note	ref
+2026-01-01	pdf	extract shared helper for duplicated converter	kept	byte-identical dup across two files	abc1234
+2026-01-01	bundle	vendor manualChunks split	revert	no win, added config noise	—

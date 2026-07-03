@@ -1,0 +1,877 @@
+{
+  "lock_format": 1,
+  "factory_version": "v1.0.2",
+  "engine_floor": "1.0.0",
+  "source_sha": "2da026711147f62cce4a22e33593002e5dfbb215",
+  "release_digest": "sha256:f2ccf2815474d6d16bd4f330117b30a153b77a51203ba0c7c79ed089149af2ee",
+  "provenance": {
+    "predicate_type": "https://slsa.dev/provenance/v1",
+    "bundle_sha256": "b917ab350195f4eb19990048b2cb192d08f53e24228638b9247efd26d2da8bd0",
+    "builder_id": "https://github.com/rtxnik/workflow-factory/.github/workflows/release.yml@refs/tags/v1.0.2",
+    "source_sha": "2da026711147f62cce4a22e33593002e5dfbb215",
+    "verified": true,
+    "verified_via": "gh-attestation",
+    "trusted_root_sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
+    "sbom": {
+      "asset": "factory-payload.sbom.spdx.json",
+      "sha256": "8bc2e87a6e006fc1292657a5a70067b3d8c532702836db1121a514ed104fbf06",
+      "predicate_type": "https://spdx.dev/Document",
+      "bundle_asset": "factory-payload.sbom.spdx.json.sigstore.jsonl",
+      "verified": true,
+      "verified_via": "gh-attestation",
+      "bundle_sha256": "8130d1ba8204ff18aab3fecc570d9db0319e4ad4c05de6cf7c5ecfec9320c807"
+    }
+  },
+  "host_prereqs": [
+    {
+      "tool": "bash",
+      "detect_cmd": "command -v bash",
+      "install_guidance": "POSIX bash 4+"
+    },
+    {
+      "tool": "gh",
+      "detect_cmd": "command -v gh",
+      "install_guidance": "GitHub CLI (push-review/merge-gate)"
+    },
+    {
+      "tool": "git",
+      "detect_cmd": "command -v git",
+      "install_guidance": "git 2.30+"
+    },
+    {
+      "tool": "jq",
+      "detect_cmd": "command -v jq",
+      "install_guidance": "jq 1.6+"
+    },
+    {
+      "tool": "superpowers",
+      "detect_cmd": "test -d ~/.claude/plugins/superpowers@*",
+      "install_guidance": "Install the superpowers Claude Code plugin"
+    }
+  ],
+  "profile": "minimal",
+  "resolved_capabilities": [
+    "enforcement-floor",
+    "owner-floor",
+    "workflow-spine"
+  ],
+  "files": {
+    ".claude/discipline.md": {
+      "sha256": "fe8300a0cffc9765fb7a5661172a36e71ec8281da978b2b740d726b38169cb8d",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/gate-registry.json": {
+      "sha256": "5bcb4fbf70338cc77900fd17785c7d31c153d5e2e60c953097388f9b8154f4e2",
+      "capabilities": [
+        "enforcement-floor",
+        "owner-floor",
+        "workflow-spine"
+      ],
+      "provenance": "assembled"
+    },
+    ".claude/hooks/CONFIG.md": {
+      "sha256": "c0527ecb102bd58ce0e9201bddb4970fe38cfb2d8a317161a7829a502eb924b7",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/README.md": {
+      "sha256": "bf77aa0fa0d82bb25708ce5198b2b058a71cdbb3cc42ef30f2ce72faf4b1a3d9",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "regenerated"
+    },
+    ".claude/hooks/bounded-surface-guard.sh": {
+      "sha256": "d704c9d4f9341affe9155ba91c868d1554322b20ebc99288e3a6cf5da7d03ce0",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/commit-integration.sh": {
+      "sha256": "f65d4a5dadc8c6b97ec6c6a8196e31b66678521f44f5452b236677cbb8cf9941",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/config-protection.sh": {
+      "sha256": "d7a222f189d010096702fad09803bb3897ede66ff037ff0050a85becae007d8f",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/context-exhaustion-gate.sh": {
+      "sha256": "2449d72087959d290333f8826750d0f55b92d84794508d238c1e64c98934aff0",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/default-branch-guard.sh": {
+      "sha256": "cc738363c5944bf9b5a222ad3ff70f84fa194cae9ec1f13240af557f12303e44",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/doc-path-warn.sh": {
+      "sha256": "893f00a1651153a3b78a3b5b4e774b17c89dcb108eb42de77f4fd52057ce89a5",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/forbidden-ai-attribution.sh": {
+      "sha256": "7e554860f4af2bf3771b8d5f39f9b4d8c0d457528d8702a8018f377606bcf717",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/gate-evidence.sh": {
+      "sha256": "e39403ec4e0d2c8dd6bef792942aff68a19d0581ef1f0bb47285535c21532cb3",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/large-file-guard.sh": {
+      "sha256": "fdf63e853dcccc1d15eedf3ac6f8216e0b5357a25c25adca20906d878a10b3de",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/lib/hooklib.sh": {
+      "sha256": "5dfa814f2d0bd63ad96f22b53a5504f238075c9854e7996585c16384954fe54d",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/merge-gate.sh": {
+      "sha256": "c6d0e1a381d96795b3103953267e623870a3b9da3a56050817cc7630a937f1c4",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/pre-push-contract.sh": {
+      "sha256": "8e677fe5ee5d26898634a28e38ea5e720f7dcfea6ecd3919a23fbd16dcac40ed",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/pre-push-secrets.sh": {
+      "sha256": "01706b1eec491c9d475775bf29a5c96b15dcbd9fd4f1d8380d67af39a09dd05a",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/push-review.sh": {
+      "sha256": "d92423777ff404c747673c8f85b7b253630e8c39d4d5c86fa9d0b17390a2353e",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/secrets-scan.sh": {
+      "sha256": "8cce6517c2d6399d06d4009f6f904b85ea971a2f048ab8489057c46d01f59082",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/state-reconciler.sh": {
+      "sha256": "b343945a237ed10d463bf0c3935db34275bf1337f1995fd55e852cfc0a48c83b",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/statusline.js": {
+      "sha256": "9dd36142fb3344670c99d2993592838faab9f631ef99e39833a1cc1180545d62",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/subagent-discipline.sh": {
+      "sha256": "63efc3d773b4432b2090226d19e99574a355883abea43fa4d899a941f5bc0f49",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/suggest-loop-skill.sh": {
+      "sha256": "60e6daf4fe9b20f2ee0dec9d65adfcedfe5f9abddaaf643416e25f341c770fc3",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-audit-helpers.sh": {
+      "sha256": "2169e53f018aa8c2193284b87ba65e9c533cf290317568ab2433d4f8d7c45610",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-bounded-surface-guard.sh": {
+      "sha256": "f938b400f88c6e1caeb8a0b723363613e8db352779cd86c99c19ade38f608841",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-commit-integration.sh": {
+      "sha256": "54cf48711e3d5837400be52a7122d930d19753bcd77b6a6d63d217f591944bf1",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-config-protection.sh": {
+      "sha256": "c8253838dc3182e8a595d8bfa6522e8e1d558f1afea4ad694072ef15fb444d2a",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-context-exhaustion-gate.sh": {
+      "sha256": "2e43a2a3ef7727bb88a946a46c4d120c48bfecb5ed4265e12c48dc358ba18daf",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-default-branch-guard.sh": {
+      "sha256": "1f90c12db6462fd81732ef8832a437fadf58a7fc293a859a9c944d086cb2c707",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-doc-path-warn.sh": {
+      "sha256": "c115f6f75ec32d5375de99b2d1ae3d166f1c7c09a73460b1eb53eb408d91e5e8",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-fail-open.sh": {
+      "sha256": "c5ad4cb0ca0642280371845602abccb3eca98a74c1e5e4e66cea7647999c871e",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-forbidden-ai-attribution.sh": {
+      "sha256": "b0094efbcf1f382dd3a6394af5539498a71a436049515ff59bb7fe56d24202a7",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-gate-evidence.sh": {
+      "sha256": "a2d6e0a25cb58f415f778f41b546a4a8a96182ef066ecc02dea1ad7bf5707b85",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-hook-disable.sh": {
+      "sha256": "dd1dacabfed1525db5ea9937b2f36007d47526fc3168ab77b5eef1abcf78f29c",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-hooklib-status.sh": {
+      "sha256": "ba3a92172e228493e3186f488c138b78ef44c6ab5a6fdf685275d2bd6dd6f325",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-hooklib.sh": {
+      "sha256": "4d149f8d78da9fc9fb742528dbce60967c298c9458cd96f1442ea135ff5ef749",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-large-file-guard.sh": {
+      "sha256": "6fc175dfa1e43ec9e322eec40b301f205299c56fdfd950cce0b18a2d9f3aaa9d",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-merge-gate.sh": {
+      "sha256": "489ab3a078df87a90c2a91641a212a8c5ca80d28d8bb171ab171b9aa9cffba3c",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-planning-dir.sh": {
+      "sha256": "b196b1722750d57833b3faddefef9913027d9673cade90dccaba847b7cc46ad3",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-pre-push-contract.sh": {
+      "sha256": "400c72dbe3677f404fc27ae5edad718c714df146a8a95f267c0f734ba74fce80",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-pre-push-secrets.sh": {
+      "sha256": "8567db6f7cc2dff4e2b1356fa2e7d36dd4856fcf71b5237a05c6226df7b9e3f1",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-public-hint.sh": {
+      "sha256": "033c1f8db4fe47b8cb132a1adc18e456a0b30cc31f6e99a93eef5976fb2eb539",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-push-review.sh": {
+      "sha256": "ce027a012dbde8c594d164d5a62244bdcc6a2d22f46287a0dd1839c4cf59c06f",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-secrets-scan.sh": {
+      "sha256": "65a2fef5ebfc48788a868cf2541e73111612efea1a46b24651694656b74e7f1d",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-state-reconciler.sh": {
+      "sha256": "41d6f155499ead2005bde19b0ba4d8eb364ef3e32caade413c5c5add625493c1",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-statusline-ctx-contract.sh": {
+      "sha256": "61f4b3e342b2be85dc721cd0ed794a3b2998473f87f333cb56d135236c82cbb1",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-statusline-ctx-write.sh": {
+      "sha256": "d565ea07daf761971daa0342ce8addc2b6726cd4da3c0ecf1cd68e2e7618a9fd",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-subagent-discipline.sh": {
+      "sha256": "315bfef565db21efc5c8b005b8586dd45221d0b026fb6cb448448dd977b2a810",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-suggest-loop-skill.sh": {
+      "sha256": "c4c626de3c9ac74ce6bf92b05f95c418cc8a93092d7ecce92376ff4519c38c66",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-tool-loop-guard.sh": {
+      "sha256": "38403b64645cfb95e646340a36308e22e3ec4a9e98493c9984b33da342975f44",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-workflow-phase-tracker.sh": {
+      "sha256": "ecaf11fa4539e64aea17e2fd5024c56dfe7eaa19be640fd3d78f63a4410a9ee9",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tests/test-worktree-secrets-scan.sh": {
+      "sha256": "2a12f86fb5eef1bf573460b70011232e5cf89a02e0f080c1ae80060bf44b67b1",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/tool-loop-guard.sh": {
+      "sha256": "891eb1abc10c89dd587d4d9545b9f7c2d10536e1b4a5a79bd93493b2551e4a8e",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/workflow-phase-tracker.sh": {
+      "sha256": "9ea312fea7c4d656188ef6c1631b0cd7eb4f84b6d71e7a02a611ad44600568ce",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/hooks/worktree-secrets-scan.sh": {
+      "sha256": "e023cbfbee10cb996786fdb295e0f015bf74754c245d40226a969c53b617be7c",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".claude/review-rubric.md": {
+      "sha256": "9f4847764a9b291bd0f91b0d31f2d61652e81976ac91a20d23e9da90db82b4d7",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/settings.json": {
+      "sha256": "251708a2c7c9d1a69fae6a68d0288b68eecf4946e853d013edd0e108fa0f181e",
+      "capabilities": [
+        "enforcement-floor",
+        "workflow-spine"
+      ],
+      "provenance": "assembled"
+    },
+    ".claude/skills/create-pr/SKILL.md": {
+      "sha256": "9a40785b49890d368df2b084132a084ee2ee34287d09d6b687480fb2ca6fc7b9",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/skills/optimization-loop/SKILL.md": {
+      "sha256": "9615dd3c0145801c6e4b4db3860dc258721e7de925c10fe2233b8c2ae85015b9",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".claude/skills/polish-loop/SKILL.md": {
+      "sha256": "f719972b16a3c4b82c5665cae42f1a98d2dab8e5aa7d0054d7ffa5daebc97ec5",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".factory/factory.config.schema.json": {
+      "sha256": "089971835fa7fed6fcd3d3a9f426ce2269695665155f374241aa55eb1e55487f",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".factory/factory.lock.schema.json": {
+      "sha256": "0ec908efcfbb2a0474186f20c80927fcbe179935cb8107d0961b5db86216ad5c",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".factory/overlay.schema.json": {
+      "sha256": "7a179d05795ca28511809482c1d447add3a3884a07d9d4079f80fe17970a542d",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".github/actions/setup-yq/action.yml": {
+      "sha256": "03c039104b5d2178dc49d45cccee5efb5734ba5f398f985860413ef601adeb96",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".github/dependabot.yml": {
+      "sha256": "a9e4078b5f0244615af09c1140e853637370ef234c7c3365458fb6d7435040d6",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "assembled"
+    },
+    ".github/pull_request_template.md": {
+      "sha256": "eee218fb541c5c11b8b57fde0843a32acd5eb6c14d08f985dc0d247a9d593114",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    ".github/workflows/dependabot-autoregen.yml": {
+      "sha256": "325118999d25448c55719aaf82f807116287b5f60de4afed3e1c360ef3297110",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".github/workflows/fabric-gates.yml": {
+      "sha256": "b81c1f8dd30a200bbbd0d8b444bc0a6b9095f75ded5f61b4e8121396cda9c1a4",
+      "capabilities": [
+        "enforcement-floor",
+        "workflow-spine"
+      ],
+      "provenance": "assembled"
+    },
+    ".github/workflows/security.yml": {
+      "sha256": "4bee36aa0caf43b41ab73fb026580dd1f7f869a7e3cec88e2d9780d2968fb125",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".gitignore": {
+      "sha256": "86237a8eca4e9d403f26de7620cf34b928ef48a660cb56c6369a61cdddd8be55",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "assembled"
+    },
+    ".planning/LEDGER.example.tsv": {
+      "sha256": "6d57946cbf8ab621e7c838eab8700026fbd42804233e39169fc43b09a3e54aa9",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    ".shellcheckrc": {
+      "sha256": "5eadd0e4b1e3985749e250a8addd00ab72c213d01ed8d8695a7727d3b6af4f5f",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "Makefile.factory": {
+      "sha256": "bc4f0ff10ada213b8e50c490974adb69e65759529275f2dcd10d5862baab7f64",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "assembled"
+    },
+    "repos/SCHEMA.md": {
+      "sha256": "d7ce447c83d69a28a0d2daaa5f32011c31d4183fa7deb2ffa0c49c93d43540bc",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "repos/TEMPLATE.md": {
+      "sha256": "36c6f248c65a2e743f6c06792e300fbc908ed201b198932ffa3c95ee3041c5ed",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/check-integration-branch-protection.sh": {
+      "sha256": "fbfb90ae8b05c88d5a937c056c980094e780ec7cce934d441772328472d01849",
+      "capabilities": [
+        "owner-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/check-integration-hooks.sh": {
+      "sha256": "0d39982205951ed2fc6862fc675b593a0a7b4c54735879eaa1e6270671558ac7",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/check-integration-mcp.sh": {
+      "sha256": "f4ff9b9bd875f6b5aef2e3d5a6598e0774797e0c369ac803a79b7baae142e74c",
+      "capabilities": [
+        "enforcement-floor",
+        "workflow-spine"
+      ],
+      "provenance": "assembled"
+    },
+    "scripts/check-integration-merge-markers.sh": {
+      "sha256": "699e56264a40d8f6675fe7908d3a7992611cacea9ea978600dcf1b7f9a985f47",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/check-integration-phase4.sh": {
+      "sha256": "8ca4d1ad9b9b7dfb07dc1f98e290e3c14605c91e64494b26f879fce543c03267",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    "scripts/check-integration-rubric.sh": {
+      "sha256": "98f46900f2764de869bfc416444ee5093c228f05d27b3ce5a88372ff11a70e08",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/check-ledger-gate.sh": {
+      "sha256": "31e2189508369ad2737b3fc8a94761a5a3b38eb2c9f4709cfff4bf66fc4b6e40",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/check-schema.sh": {
+      "sha256": "86032e52903fd10003909f4bf4c768ee97468be87f50d82ef1515fb585078b90",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/dependabot-regen.sh": {
+      "sha256": "dd8a20bd88f0248d8217f9ba0034dc05fd08c100e484ac02c46df4f1bdade2e9",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/dependabot-verify-patch.sh": {
+      "sha256": "4d5b16e2851005169b629bed5134026b0c9cd2f0f9f65390c5b8571883f4267b",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/clean.yml": {
+      "sha256": "42ba51e0efaa67d20f239e49bf6f9817e887ffe1899f0c7e9d619c3f4aa8462f",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/compose-pin-sample.py": {
+      "sha256": "b30b9d3259d18238870a1e6cba26f6f3b38c5cc902a72ee868470e8640a206c1",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/composite-clean.yml": {
+      "sha256": "86a64dc805ef4c15be9a07e18cf170fb243de29834b0c7199cc8f859496a1615",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/composite-injection.yml": {
+      "sha256": "640c2fa40c86808b352c65c8c098575517888bc477b1866024f602a09d944237",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/r1-missing-perms.yml": {
+      "sha256": "9b9a5942c697f0063398e0643a40e3493e295a1832e83c99e3597c9754ec52c0",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/r1-multidoc.yml": {
+      "sha256": "d3fb6051244c5e24cee8fa24acba5bb4e04cf8c874ba24c0f362e1b55c24f3cd",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/r1-top-write.yml": {
+      "sha256": "7ebb7a5c70884ec8edd3c502aeabc65bcb3e2c0750b5339ddab71bc0365b8c43",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/r2-templated.yml": {
+      "sha256": "e34890f95ded3c66583709ef5b6b2ae5430fe9bd90a391a954ab1b72026d9bd8",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/r2-unpinned.yml": {
+      "sha256": "c4aca48e631e5e537bc2d40dd9eb6c45d162ef91d8fc59174df5b36c2b978066",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/r3-ghscript.yml": {
+      "sha256": "e24cc5e25480039d7f14af2347e879fc69a842a9e2094065804fc78bec522843",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/r3-injection.yml": {
+      "sha256": "a20798d513179f68905a79c700e3e95d8d193466775535d00945d841a88087da",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/fixtures/r3-inputs.yml": {
+      "sha256": "c9cb11b93e44940a6a1bdd6a165650b6db0bf6d47547fc72b5da4a345f618e28",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/test-check-integration-branch-protection.sh": {
+      "sha256": "608ebee7c3036806a241132a312270d659ad9ceea6d721dcb9c7e7f09a05a298",
+      "capabilities": [
+        "owner-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/test-check-ledger-gate.sh": {
+      "sha256": "8ef5be8905f0ccaa32bff7e68a5d81a7a004ea8afff95fca6409fcd7d8bf060f",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/test-check-schema.sh": {
+      "sha256": "9096fa82cea0280548e9853d81af90ad423aa983ce1e2208bcd9ade41cf34482",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/test-dependabot-regen.sh": {
+      "sha256": "d0d1b023f8e0e4ce0faf8c4d0465c851f71c38ddf8063d7cada82a2c9ac7e24b",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/test-dependabot-verify-patch.sh": {
+      "sha256": "a7190e987e1af0bf7b4a173bc113d5e24b864787eb78adf5efad1abc390f8308",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/tests/test-validate-workflow-security.sh": {
+      "sha256": "c813136db0fe07ed4199a44799ed034236b483449d98cbdbcd382622d22da45b",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/ci/validate-workflow-security.sh": {
+      "sha256": "202e6ab5405aa61e1a56e504394f3fa8ae19b06238cb19ead3c65aa9ebd984ef",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/gen-hooks-readme.sh": {
+      "sha256": "b84d41ff9423ba5698b7646c5635b4c2ad2d72c1b12a128315389dee759cf477",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/integration-check.sh": {
+      "sha256": "1cc81c863a878d06971b59cc50db4cdd665c63e9c897dd181d52e760610dddbb",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/lib/check.sh": {
+      "sha256": "b974c210940b647c8a289619a748171cff87dfef0fb6608b934b01fe6c2ba2a5",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/lib/testlib.sh": {
+      "sha256": "adaaf4109c286fd21d4199305d17a636c72c6b93dfb5fa014e918c9ade5150f9",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/lib/tests/test-check.sh": {
+      "sha256": "61e48092b99b47e1d625df3c08e9a39cdc8f9a5f436622ce2a40824be0ec5752",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/lib/tests/test-testlib.sh": {
+      "sha256": "3455bf2f9e65604b46380f18d7edde6aebbb46c8fd2099ebb6df689929c48a4d",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/setup-branch-protection.sh": {
+      "sha256": "0d9465bd68238c037ac837242738c486ac413cab610015891cd0c675be905c63",
+      "capabilities": [
+        "owner-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/tests/test-check-integration-hooks.sh": {
+      "sha256": "4862c4d22e9af6e98a222c8aa3bd8773913a768dc45d27ebf8c051ac0fa81dfa",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/tests/test-check-integration-merge-markers.sh": {
+      "sha256": "0cc85a31db3121e3e14374765e610a6539489220c9ae8eeffd779155e646ae15",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/tests/test-check-integration-phase4.sh": {
+      "sha256": "75d88d82eef6a40070488a999a59338ef0b80466cef53493e19349c46ce52e6d",
+      "capabilities": [
+        "workflow-spine"
+      ],
+      "provenance": "base"
+    },
+    "scripts/tests/test-check-integration-rubric.sh": {
+      "sha256": "5ecaf59e3026b492d41fc2411b8b9cc663d970f47ea7c46fd8abe7506d6dc866",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    },
+    "scripts/tests/test-integration-check.sh": {
+      "sha256": "d7f6b34960a9419c951483782f2215626c06fcbd470539a43edd2be8881434b0",
+      "capabilities": [
+        "enforcement-floor"
+      ],
+      "provenance": "base"
+    }
+  }
+}
