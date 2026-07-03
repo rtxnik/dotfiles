@@ -18,3 +18,22 @@
 #
 # Binding contract: vault-ai/docs/adr/adr-sec-05-bws-replaces-1password.md §M2.
 dot_config/bws/state
+
+# --------------------------------------------------------------------------
+# Repo tooling (workflow fabric consumer install)
+# --------------------------------------------------------------------------
+# These paths are repo-development tooling only (CI scripts, integration
+# checks, agent conventions, fabric config/lock) and must never be copied
+# into $HOME by chezmoi.
+scripts/ci
+scripts/lib
+scripts/tests/test-*.sh
+scripts/check-integration-*.sh
+scripts/integration-check.sh
+scripts/gen-hooks-readme.sh
+scripts/setup-branch-protection.sh
+repos
+Makefile.factory
+CLAUDE.md
+factory.json
+factory.lock
