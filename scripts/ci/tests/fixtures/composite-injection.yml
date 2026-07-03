@@ -1,0 +1,7 @@
+name: bad-composite
+description: composite with an injection sink
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: echo "${{ github.event.issue.title }}"

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rtxnik/workflow-factory/.factory/factory.config.schema.json",
+  "title": "factory.json — workflow-factory consumer intent (config_format 1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["config_format", "profile", "identity"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "config_format": { "const": 1 },
+    "factory_version": { "type": ["string", "null"], "pattern": "^v?\\d+\\.\\d+\\.\\d+" },
+    "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "add": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } },
+        "remove": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "owner", "year", "description"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+        "owner": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+        "year": { "type": "string", "pattern": "^[0-9]{4}$" },
+        "description": { "type": "string", "minLength": 1 }
+      }
+    },
+    "overlays": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "disable": { "type": "array", "items": { "type": "string", "pattern": "^(hook|gate):[A-Za-z0-9._-]+$" } }
+      }
+    },
+    "npm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["scope", "registry"],
+            "properties": {
+              "scope": { "type": "string", "pattern": "^@[a-z0-9][a-z0-9._-]*$" },
+              "registry": { "type": "string", "pattern": "^https://[^\\s\"'`$<>\\\\]+/$" },
+              "token_env": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+            }
+          }
+        }
+      }
+    },
+    "notifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "auto_pr": { "type": "boolean" } }
+    }
+  }
+}

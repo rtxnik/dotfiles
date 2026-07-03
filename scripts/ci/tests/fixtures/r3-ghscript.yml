@@ -1,0 +1,13 @@
+name: ghscript
+on: [pull_request_target]
+permissions:
+  contents: read
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const t = "${{ github.event.pull_request.title }}"
+            console.log(t)

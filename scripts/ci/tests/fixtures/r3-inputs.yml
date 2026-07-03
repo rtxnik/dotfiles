@@ -1,0 +1,9 @@
+name: r3-inputs
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ github.event.inputs.title }}"

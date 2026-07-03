@@ -1,0 +1,251 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/statusline.js\"",
+    "refreshInterval": 10
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "Bash",
+      "WebFetch",
+      "WebSearch",
+      "Agent",
+      "NotebookEdit",
+      "Bash(pnpm :*)",
+      "Bash(npx :*)",
+      "Bash(go :*)",
+      "Bash(bats :*)",
+      "Bash(chezmoi :*)",
+      "Bash(make :*)",
+      "Bash(golangci-lint :*)",
+      "Bash(shellcheck :*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git switch:*)",
+      "Bash(git remote:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh auth status:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*:*)",
+      "Bash(rm -rf /:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(git clean -f:*)",
+      "Bash(git checkout -- .:*)",
+      "Bash(git restore .:*)",
+      "Bash(git push --force origin main:*)",
+      "Bash(git push -f origin main:*)",
+      "Bash(git commit --no-verify:*)",
+      "Bash(git commit -n:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git tag:*)",
+      "Bash(git branch -D:*)",
+      "Bash(git branch -d:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr close:*)",
+      "Bash(gh issue close:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker rmi:*)",
+      "Bash(rm -rf:*)",
+      "Bash(rm -r:*)"
+    ],
+    "defaultMode": "auto"
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/suggest-loop-skill.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking for loop-skill match"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/secrets-scan.sh\"",
+            "timeout": 10,
+            "statusMessage": "Scanning for secrets"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/large-file-guard.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking file size"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/config-protection.sh\"",
+            "timeout": 5,
+            "statusMessage": "Protecting quality-gate configs"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/doc-path-warn.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking doc path"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/forbidden-ai-attribution.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking for AI attribution"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/push-review.sh\"",
+            "timeout": 10,
+            "statusMessage": "Reviewing push"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/pre-push-contract.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking LEDGER contract"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/pre-push-secrets.sh\"",
+            "timeout": 10,
+            "statusMessage": "Scanning push for secrets"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/default-branch-guard.sh\"",
+            "timeout": 5,
+            "statusMessage": "Guarding default branch"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/merge-gate.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking merge gate"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/subagent-discipline.sh\"",
+            "timeout": 5,
+            "statusMessage": "Injecting workflow discipline"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/workflow-phase-tracker.sh\"",
+            "timeout": 5,
+            "statusMessage": "Tracking workflow phase"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/commit-integration.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking for commit integration"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/worktree-secrets-scan.sh\"",
+            "timeout": 10,
+            "statusMessage": "Scanning Bash-written changes for secrets"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/gate-evidence.sh\"",
+            "timeout": 5,
+            "statusMessage": "Recording gate evidence"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/bounded-surface-guard.sh\"",
+            "timeout": 5,
+            "statusMessage": "Tracking change surface"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Edit|Write|Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/tool-loop-guard.sh\"",
+            "timeout": 5,
+            "statusMessage": "Detecting tool loops"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/context-exhaustion-gate.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking context budget"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/state-reconciler.sh\" || true",
+            "timeout": 5,
+            "statusMessage": "Reconciling workflow state"
+          }
+        ]
+      }
+    ]
+  },
+  "enableAllProjectMcpServers": false,
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "code-review@claude-plugins-official": false
+  }
+}

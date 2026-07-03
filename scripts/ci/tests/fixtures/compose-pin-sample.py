@@ -1,0 +1,10 @@
+_FABRIC_GATES_STEPS = [
+    ("floor", """\
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          fetch-depth: 0
+"""),
+    ("floor", """\
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+"""),
+]

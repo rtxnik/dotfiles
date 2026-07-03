@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rtxnik/workflow-factory/.factory/overlay.schema.json",
+  "title": "overlay/bundle.toml — consumer customization manifest (SP-3b/SP-8)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "disable": { "type": "array", "items": { "type": "string" } },
+    "add_ci": { "type": "array", "items": { "type": "string" } },
+    "replace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["disable", "add"],
+        "properties": {
+          "disable": { "type": "string" },
+          "add": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+        }
+      }
+    },
+    "add_hook": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slug"],
+        "properties": {
+          "slug": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "event": { "type": "string" },
+          "matcher": { "type": "string" }
+        }
+      }
+    },
+    "settings_fragment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hook_ids": { "type": "array", "items": { "type": "string" } },
+        "permissions_allow": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^mcp__[A-Za-z0-9._]+(?:__[A-Za-z0-9._-]+)*$" }
+        }
+      }
+    },
+    "settings_merge": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "env": { "type": "object", "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]*$" } },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "deny": { "type": "array", "items": { "type": "string" } },
+            "ask": { "type": "array", "items": { "type": "string" } },
+            "allow": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^mcp__[A-Za-z0-9._]+(?:__[A-Za-z0-9._-]+)*$" }
+            }
+          }
+        }
+      }
+    },
+    "yaml_merge": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "append_updates"],
+        "properties": {
+          "file": { "enum": [".github/dependabot.yml"] },
+          "append_updates": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["package-ecosystem", "schedule"],
+              "oneOf": [
+                { "required": ["directory"] },
+                { "required": ["directories"] }
+              ],
+              "properties": {
+                "package-ecosystem": {
+                  "enum": ["bundler", "cargo", "composer", "devcontainers", "docker",
+                           "docker-compose", "dotnet-sdk", "elm", "gitsubmodule",
+                           "github-actions", "gomod", "gradle", "helm", "maven", "mix",
+                           "npm", "nuget", "pip", "pub", "swift", "terraform", "uv"]
+                },
+                "directory": { "type": "string" },
+                "directories": { "type": "array", "items": { "type": "string" } },
+                "schedule": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["interval"],
+                  "properties": {
+                    "interval": { "enum": ["daily", "weekly", "monthly"] },
+                    "day": { "enum": ["monday", "tuesday", "wednesday", "thursday",
+                                      "friday", "saturday", "sunday"] },
+                    "time": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" },
+                    "timezone": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

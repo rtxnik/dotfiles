@@ -1,0 +1,9 @@
+name: good-composite
+description: env-routed composite
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        T: ${{ github.event.inputs.title }}
+      run: echo "$T"

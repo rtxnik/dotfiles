@@ -1,0 +1,124 @@
+name: dependabot-autoregen
+on:
+  # zizmor: ignore[dangerous-triggers] — workflow_run is the mandated commit-back trigger and is
+  # safe-by-construction here: two isolated jobs. The unprivileged `regen` producer runs the
+  # dependency code with contents:read and NO secrets; the privileged `commit` job runs NO PR code,
+  # only applies an allowlist-verified patch and pushes via a scope-limited App token (never the
+  # GITHUB_TOKEN). Both jobs gate on event==pull_request && head_branch startsWith 'dependabot/';
+  # head_branch/head_sha are routed through env: (never into a run: body, R3-clean); no
+  # pull_request_target.
+  workflow_run:
+    workflows: ["fabric-gates"]
+    types: [completed]
+permissions: {}
+concurrency:
+  group: dependabot-autoregen-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+jobs:
+  regen:
+    name: regen (unprivileged producer)
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      startsWith(github.event.workflow_run.head_branch, 'dependabot/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-yq
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        with:
+          node-version: '24'
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+      - name: Regenerate self-host artifacts
+        run: bash scripts/ci/dependabot-regen.sh
+      - name: Produce patch over tracked changes
+        run: git diff HEAD > "$RUNNER_TEMP/regen.patch" || true
+      - name: Stage patch for upload
+        run: cp "$RUNNER_TEMP/regen.patch" regen.patch
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: regen-patch
+          path: regen.patch
+          if-no-files-found: error
+          retention-days: 1
+  commit:
+    name: commit (privileged applier)
+    needs: regen
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      startsWith(github.event.workflow_run.head_branch, 'dependabot/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+      PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+    steps:
+      - name: Download patch
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: regen-patch
+          path: ${{ runner.temp }}/dl
+      - name: Classify patch (empty -> loop-safe no-op)
+        id: patch
+        run: |
+          set -euo pipefail
+          if [ -s "$RUNNER_TEMP/dl/regen.patch" ]; then
+            echo "empty=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "empty=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Mint App token (write, this repo only)
+        id: token
+        if: steps.patch.outputs.empty == 'false'
+        continue-on-error: true
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+      - name: Checkout PR head with App token
+        if: steps.patch.outputs.empty == 'false' && steps.token.outcome == 'success'
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          ref: ${{ env.HEAD_SHA }}
+          token: ${{ steps.token.outputs.token }}
+          persist-credentials: true
+          fetch-depth: 0
+      - name: Verify, apply, commit, push
+        if: steps.patch.outputs.empty == 'false' && steps.token.outcome == 'success'
+        run: |
+          set -euo pipefail
+          bash scripts/ci/dependabot-verify-patch.sh "$RUNNER_TEMP/dl/regen.patch"
+          git apply "$RUNNER_TEMP/dl/regen.patch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(ci): regenerate self-host artifacts for dependabot bump"
+          git push origin "HEAD:${HEAD_BRANCH}"
+      - name: Degrade -- comment patch when no write token
+        if: steps.patch.outputs.empty == 'false' && steps.token.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          {
+            echo "Auto-regen produced artifact updates but no write-capable App token was available."
+            echo "A maintainer can apply the patch below to green this PR:"
+            echo '```diff'
+            cat "$RUNNER_TEMP/dl/regen.patch"
+            echo '```'
+          } > "$RUNNER_TEMP/comment.md"
+      - name: Post degrade comment
+        if: steps.patch.outputs.empty == 'false' && steps.token.outcome == 'failure'
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0  # v3.0.4
+        with:
+          number: ${{ env.PR_NUMBER }}
+          path: ${{ runner.temp }}/comment.md

@@ -1,0 +1,7 @@
+{
+  "$schema": ".factory/factory.config.schema.json",
+  "config_format": 1,
+  "profile": "minimal",
+  "capabilities": { "add": ["workflow-spine", "owner-floor"], "remove": ["secrets-deep"] },
+  "identity": { "name": "dotfiles", "owner": "rtxnik", "year": "2026", "description": "Cross-machine dotfiles managed with chezmoi + age" }
+}
