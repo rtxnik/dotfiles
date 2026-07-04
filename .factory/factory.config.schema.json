@@ -10,6 +10,7 @@
     "config_format": { "const": 1 },
     "factory_version": { "type": ["string", "null"], "pattern": "^v?\\d+\\.\\d+\\.\\d+" },
     "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "visibility": { "enum": ["internal", "public"] },
     "capabilities": {
       "type": "object",
       "additionalProperties": false,

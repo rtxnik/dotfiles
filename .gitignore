@@ -4,4 +4,9 @@
 *~
 state/
 # >>> factory-managed (do not edit inside this block) >>>
+.claude/settings.local.json
+.planning/audit/
+.planning/gate-evidence.log
+.planning/review-state.json
+.planning/workflow-state.json
 # <<< factory-managed <<<

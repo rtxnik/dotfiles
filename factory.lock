@@ -1,25 +1,25 @@
 {
   "lock_format": 1,
-  "factory_version": "v1.0.2",
-  "engine_floor": "1.0.0",
-  "source_sha": "2da026711147f62cce4a22e33593002e5dfbb215",
-  "release_digest": "sha256:f2ccf2815474d6d16bd4f330117b30a153b77a51203ba0c7c79ed089149af2ee",
+  "factory_version": "v1.0.3",
+  "engine_floor": "1.0.3",
+  "source_sha": "be3582b9830e83443dc85568074a87f6fc87b03d",
+  "release_digest": "sha256:f551778024d19098f72d8331c7cd950d3be07ce3a31bd0cd794e9ea79657500f",
   "provenance": {
     "predicate_type": "https://slsa.dev/provenance/v1",
-    "bundle_sha256": "b917ab350195f4eb19990048b2cb192d08f53e24228638b9247efd26d2da8bd0",
-    "builder_id": "https://github.com/rtxnik/workflow-factory/.github/workflows/release.yml@refs/tags/v1.0.2",
-    "source_sha": "2da026711147f62cce4a22e33593002e5dfbb215",
+    "bundle_sha256": "0894c8a0ce205a4a531fc2b3d658f6859d22573a28c9bd46a498da8ac0ab0e53",
+    "builder_id": "https://github.com/rtxnik/workflow-factory/.github/workflows/release.yml@refs/tags/v1.0.3",
+    "source_sha": "be3582b9830e83443dc85568074a87f6fc87b03d",
     "verified": true,
     "verified_via": "gh-attestation",
     "trusted_root_sha256": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c",
     "sbom": {
       "asset": "factory-payload.sbom.spdx.json",
-      "sha256": "8bc2e87a6e006fc1292657a5a70067b3d8c532702836db1121a514ed104fbf06",
+      "sha256": "57ec519814dd7a643d8ca3a8eaf5dd245346beeee3b67ce7056d707143727488",
       "predicate_type": "https://spdx.dev/Document",
       "bundle_asset": "factory-payload.sbom.spdx.json.sigstore.jsonl",
       "verified": true,
       "verified_via": "gh-attestation",
-      "bundle_sha256": "8130d1ba8204ff18aab3fecc570d9db0319e4ad4c05de6cf7c5ecfec9320c807"
+      "bundle_sha256": "082e7f6a9e0f57803b91b651e58236468d24f16a53cac07c4dda694d58cfb2aa"
     }
   },
   "host_prereqs": [
@@ -50,6 +50,7 @@
     }
   ],
   "profile": "minimal",
+  "visibility": "internal",
   "resolved_capabilities": [
     "enforcement-floor",
     "owner-floor",
@@ -480,14 +481,14 @@
       "provenance": "base"
     },
     ".factory/factory.config.schema.json": {
-      "sha256": "089971835fa7fed6fcd3d3a9f426ce2269695665155f374241aa55eb1e55487f",
+      "sha256": "317036dc28bc841dca74c27e82df32002a9c40803bd62adfb870f9a92581c81f",
       "capabilities": [
         "enforcement-floor"
       ],
       "provenance": "base"
     },
     ".factory/factory.lock.schema.json": {
-      "sha256": "0ec908efcfbb2a0474186f20c80927fcbe179935cb8107d0961b5db86216ad5c",
+      "sha256": "3dfe3464900f5de21ef3d6fab8dbfa2d95900feb3eafa5202bb724be12655b5b",
       "capabilities": [
         "enforcement-floor"
       ],
@@ -544,14 +545,15 @@
       "provenance": "base"
     },
     ".gitignore": {
-      "sha256": "86237a8eca4e9d403f26de7620cf34b928ef48a660cb56c6369a61cdddd8be55",
+      "sha256": "3d105de93dce6d5c77c4ba7cdc682937dc31b9efbd75556422c1a5bfaf4e50d8",
       "capabilities": [
-        "enforcement-floor"
+        "enforcement-floor",
+        "workflow-spine"
       ],
       "provenance": "assembled"
     },
     ".planning/LEDGER.example.tsv": {
-      "sha256": "6d57946cbf8ab621e7c838eab8700026fbd42804233e39169fc43b09a3e54aa9",
+      "sha256": "b23d26f353691760faecb948e79ae7937b6d370c7eaaac3e709187a86527f392",
       "capabilities": [
         "enforcement-floor"
       ],
@@ -629,7 +631,7 @@
       "provenance": "base"
     },
     "scripts/ci/check-ledger-gate.sh": {
-      "sha256": "31e2189508369ad2737b3fc8a94761a5a3b38eb2c9f4709cfff4bf66fc4b6e40",
+      "sha256": "05bf806f6d1f68063a40461100c2f6e268142dd883c0913d94f3cbc5d9ae6752",
       "capabilities": [
         "enforcement-floor"
       ],
@@ -643,7 +645,7 @@
       "provenance": "base"
     },
     "scripts/ci/dependabot-regen.sh": {
-      "sha256": "dd8a20bd88f0248d8217f9ba0034dc05fd08c100e484ac02c46df4f1bdade2e9",
+      "sha256": "57f9ad3336ef38a5afe8d159e9268e61e4ffb4923c81c75fdbbc04256b329911",
       "capabilities": [
         "enforcement-floor"
       ],
@@ -748,7 +750,7 @@
       "provenance": "base"
     },
     "scripts/ci/tests/test-check-ledger-gate.sh": {
-      "sha256": "8ef5be8905f0ccaa32bff7e68a5d81a7a004ea8afff95fca6409fcd7d8bf060f",
+      "sha256": "fa0aa6133c5121b65872311166255ed866025e9b992bd588fe2b946c9fc106c0",
       "capabilities": [
         "enforcement-floor"
       ],
@@ -762,7 +764,7 @@
       "provenance": "base"
     },
     "scripts/ci/tests/test-dependabot-regen.sh": {
-      "sha256": "d0d1b023f8e0e4ce0faf8c4d0465c851f71c38ddf8063d7cada82a2c9ac7e24b",
+      "sha256": "29fc0b36f3dd446af711410ecb513af06ee58a044b9b16893efbfbc187f55d46",
       "capabilities": [
         "enforcement-floor"
       ],

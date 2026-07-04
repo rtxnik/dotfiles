@@ -1,3 +1,3 @@
-date	area	tried	verdict	why / note	ref
-2026-01-01	pdf	extract shared helper for duplicated converter	kept	byte-identical dup across two files	abc1234
-2026-01-01	bundle	vendor manualChunks split	revert	no win, added config noise	—
+timestamp	files	outcome	gate_result	notes
+2026-01-01T00:00:00Z	src/converter.py,src/pdf.py	kept	tests 12/12 pass; lint clean	extract shared helper for duplicated converter logic
+2026-01-01T00:10:00Z	vite.config.js	discarded	bundle size unchanged	vendor manualChunks split: no win, added config noise
