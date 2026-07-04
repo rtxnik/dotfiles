@@ -66,4 +66,20 @@ git -C "$w" add -A && git -C "$w" commit -qm "modify row only"
 OUT="$(cd "$w" && BASE_REF=main bash scripts/ci/check-ledger-gate.sh 2>&1)"; assert_rc "modified-row-only fails" 1 $?
 assert_out_has "no-row message (case 6)" "$OUT" 'adds no LEDGER row'
 
+# 7. external mode (wf#22/ADR-018): passes with NO ledger file at all
+w="$(mkrepo)"
+rm "$w/.planning/LEDGER.tsv"
+OUT="$(cd "$w" && LEDGER_GATE_MODE=external BASE_REF=main bash scripts/ci/check-ledger-gate.sh 2>&1)"; assert_rc "external mode passes without ledger" 0 $?
+assert_out_has "external policy line" "$OUT" 'LEDGER gate externalized'
+
+# 8. external mode: passes even with an invalid ledger
+w="$(mkrepo)"
+printf '2026-06-11T00:02:00Z\tx\twat\tpass\tbad outcome\n' >> "$w/.planning/LEDGER.tsv"
+OUT="$(cd "$w" && LEDGER_GATE_MODE=external bash scripts/ci/check-ledger-gate.sh 2>&1)"; assert_rc "external mode ignores invalid ledger" 0 $?
+
+# 9. explicit local mode behaves exactly like the default (invalid ledger fails)
+w="$(mkrepo)"
+printf '2026-06-11T00:02:00Z\tx\twat\tpass\tbad outcome\n' >> "$w/.planning/LEDGER.tsv"
+OUT="$(cd "$w" && LEDGER_GATE_MODE=local BASE_REF='' bash scripts/ci/check-ledger-gate.sh 2>&1)"; assert_rc "local mode still validates" 1 $?
+
 t_summary

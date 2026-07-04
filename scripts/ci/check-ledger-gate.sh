@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
 # CI LEDGER gate (F1 / finding D5-4): gives the LEDGER contract CI presence.
-#   1. .planning/LEDGER.tsv must pass ledger_validate (always).
+#   1. .planning/LEDGER.tsv must pass ledger_validate (unless LEDGER_GATE_MODE=external, below).
 #   2. PR builds (BASE_REF set by the workflow): if the diff vs the merge-base
 #      touches enforced fabric paths, it must NET-ADD at least one schema-shaped data row.
 # Enforced paths mirror the surface fabric-gates.yml path-filtered on before F1.
 # CI asserts the artifact (rows), never command patterns — see F1 anti-patterns.
 set -euo pipefail
+
+# wf#22 (ADR-018): public consumers home discipline rows in workspace-meta/ledgers/<repo>.tsv.
+# The composed fabric-gates.yml bakes LEDGER_GATE_MODE=external for visibility=public
+# closures; the gate then states the policy and passes without requiring a local ledger.
+if [[ "${LEDGER_GATE_MODE:-local}" == "external" ]]; then
+  echo "OK: LEDGER gate externalized: discipline rows live in workspace-meta/ledgers/<repo>.tsv (ADR-018); enforced at the meta boundary"
+  exit 0
+fi
+
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ledger="$root/.planning/LEDGER.tsv"
 

@@ -30,6 +30,7 @@
       }
     },
     "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "visibility": { "enum": ["internal", "public"] },
     "resolved_capabilities": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } },
     "files": {
       "type": "object",

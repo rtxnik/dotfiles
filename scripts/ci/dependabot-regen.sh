@@ -53,6 +53,14 @@ reconcile_action_pins() {
 }
 
 main() {
+  # wf#20 closure-portability guard (F7 pattern): the regen mutates the FACTORY
+  # workspace (tooling/factory/compose.py + root make targets), none of which exist in
+  # a consumer closure. No-op honestly so the workflow_run producer yields an empty
+  # patch and the commit job's empty-patch classifier keeps the run green.
+  if [[ ! -f tooling/factory/compose.py ]]; then
+    echo "dependabot-regen: consumer closure (no tooling/factory/compose.py) -- self-host regen not applicable; no-op"
+    exit 0
+  fi
   local bump changed
   # bump description = the dependabot commit subject at HEAD (before our regen commit).
   bump="$(git log -1 --format=%s HEAD)"

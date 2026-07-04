@@ -84,4 +84,35 @@ _rc_before="$(cat "$_rc_dir/tooling/factory/compose.py")"
 
 rm -rf "$_rc_dir"
 
+# --- wf#20 consumer-context guard: no tooling/factory/compose.py -> honest no-op, exit 0 ---
+_cons_dir="$(mktemp -d)"
+git -C "$_cons_dir" init -q
+git -C "$_cons_dir" config user.email t@t.local
+git -C "$_cons_dir" config user.name t
+mkdir -p "$_cons_dir/.github/workflows"
+printf 'name: fabric-gates\n' > "$_cons_dir/.github/workflows/fabric-gates.yml"
+git -C "$_cons_dir" add -A && git -C "$_cons_dir" commit -qm seed
+OUT="$( cd "$_cons_dir" && bash "$HERE/../dependabot-regen.sh" 2>&1 )"; rc=$?
+[ "$rc" = "0" ] && pass "consumer no-op exits 0" || fail "consumer no-op rc=$rc (want 0): $OUT"
+grep -q 'self-host regen not applicable' <<<"$OUT" \
+  && pass "consumer no-op says why" || fail "consumer no-op message missing: $OUT"
+[ -z "$(git -C "$_cons_dir" status --porcelain)" ] \
+  && pass "consumer tree untouched" || fail "consumer no-op modified the tree"
+rm -rf "$_cons_dir"
+
+# --- wf#20 self-host context proceeds past the guard (no false trigger) ---
+_sh_dir="$(mktemp -d)"
+git -C "$_sh_dir" init -q
+git -C "$_sh_dir" config user.email t@t.local
+git -C "$_sh_dir" config user.name t
+mkdir -p "$_sh_dir/tooling/factory" "$_sh_dir/.github/workflows"
+printf '# generator stub\n' > "$_sh_dir/tooling/factory/compose.py"
+printf 'name: fabric-gates\n' > "$_sh_dir/.github/workflows/fabric-gates.yml"
+git -C "$_sh_dir" add -A && git -C "$_sh_dir" commit -qm seed
+OUT="$( cd "$_sh_dir" && bash "$HERE/../dependabot-regen.sh" 2>&1 )" || true
+grep -q 'self-host regen not applicable' <<<"$OUT" \
+  && fail "guard over-triggered in self-host context: $OUT" \
+  || pass "guard not triggered when compose.py present"
+rm -rf "$_sh_dir"
+
 t_summary
