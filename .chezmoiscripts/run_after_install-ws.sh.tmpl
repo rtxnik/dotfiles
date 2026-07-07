@@ -1,0 +1,100 @@
+#!/bin/sh
+# Self-healing verified install/upgrade of the workspace-cli `ws` binary.
+#
+# Runs on EVERY `chezmoi apply` (run_, not run_onchange_): it reconciles the
+# ACTUAL state of the binary instead of trusting a previous run's recorded
+# success — a broken binary (e.g. one that no longer executes) or a stale
+# version is detected and repaired on the next apply.
+#
+#   healthy (binary executes) + version == target  -> silent fast no-op
+#   missing / broken / outdated                    -> verified reinstall
+#
+# Update channel: latest GitHub release — no hand-bumped version pins
+# (rtxnik/workspace-cli#49). The TRUST ROOT does not float with the channel:
+# the release-signing minisign key is pinned HERE, the fetched installer must
+# embed exactly this key, and the installer verifies the release signature
+# against it (--require-signature). Rotating the key therefore requires a
+# deliberate PR to this file. Set WS_PIN=vX.Y.Z to pin a version for
+# reproducible hosts (the same verification applies).
+#
+# Offline behavior: fail-open on the CHECK (a healthy installed ws is kept,
+# with a warning), fail-closed on any actual INSTALL.
+set -eu
+
+REPO="rtxnik/workspace-cli"
+RELEASE_PUBKEY="RWS9SKDBxXVQRL27p1aOVmdoSffl83dqJqKtnwDO6IqEMpdoRf+AMDGL"
+DEST="${HOME}/.local/bin/ws"
+# Test seams; also the mirror/offline path (WS_RAW_BASE may be file://...).
+API_URL="${WS_API_URL:-https://api.github.com/repos/${REPO}/releases/latest}"
+RAW_BASE="${WS_RAW_BASE:-https://raw.githubusercontent.com/${REPO}}"
+
+info() { printf '==> ws: %s\n' "$*"; }
+warn() { printf 'WARN: ws: %s\n' "$*" >&2; }
+die()  { printf 'ERROR: ws: %s\n' "$*" >&2; exit 1; }
+
+installed_version() {
+    # Prints X.Y.Z or nothing. A binary that cannot execute prints nothing —
+    # this is what detects a stale macOS per-inode code-signature cache.
+    "$DEST" --version 2>/dev/null | awk '/^ws [0-9]/{print $2; exit}' || true
+}
+
+current=""
+if [ -x "$DEST" ]; then current="$(installed_version)"; fi
+
+# Resolve the target version. The latest-check is advisory: short timeouts,
+# fail-open when a healthy ws already exists.
+target="${WS_PIN:-}"
+if [ -z "$target" ]; then
+    if api_json=$(curl -fsSL --retry 2 --retry-delay 1 --retry-all-errors \
+            --connect-timeout 5 --max-time 30 "$API_URL" 2>/dev/null); then
+        target=$(printf '%s' "$api_json" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1)
+    fi
+fi
+
+if [ -z "$target" ]; then
+    if [ -n "$current" ]; then
+        warn "could not resolve the latest release (offline?); keeping installed ws ${current}"
+        exit 0
+    fi
+    die "no working ws at ${DEST} and the latest release could not be resolved; set WS_PIN=vX.Y.Z or WS_RAW_BASE=file:///path/to/mirror and re-run 'chezmoi apply'"
+fi
+
+# Healthy and on target: silent no-op.
+if [ "$current" = "${target#v}" ]; then exit 0; fi
+
+if [ -n "$current" ]; then
+    info "upgrading ws ${current} -> ${target}"
+else
+    info "installing ws ${target} (no working binary at ${DEST})"
+fi
+
+# --require-signature needs minisign present; install it best-effort if missing.
+if ! command -v minisign >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update && sudo apt-get install -y minisign
+    elif command -v brew >/dev/null 2>&1; then
+        brew install minisign
+    else
+        die "minisign required for verified ws install but could not be installed"
+    fi
+fi
+
+installer="$(mktemp)"
+trap 'rm -f "$installer"' EXIT INT TERM
+
+curl -fsSL --retry 3 --retry-delay 1 --retry-all-errors --connect-timeout 10 --max-time 120 \
+    "${RAW_BASE}/${target}/scripts/install.sh" -o "$installer" \
+    || die "could not download install.sh at ${target} — retry 'chezmoi apply', or set WS_RAW_BASE=file:///path/to/mirror"
+
+# Key-pin gate: the fetched installer must embed exactly the pinned signing
+# key, otherwise the "latest" channel would let the trust root float.
+embedded=$(sed -n 's/^RELEASE_PUBKEY="\([^"]*\)".*/\1/p' "$installer" | head -n1)
+[ "$embedded" = "$RELEASE_PUBKEY" ] \
+    || die "install.sh at ${target} embeds an unexpected signing key (${embedded:-none}); refusing — key rotation requires a dotfiles PR"
+
+WS_VERSION="$target" PREFIX="${HOME}/.local" sh "$installer" --require-signature
+
+# Reconcile check: the just-installed binary must execute and report the target.
+now="$(installed_version)"
+[ "$now" = "${target#v}" ] || die "post-install state mismatch: expected ${target#v}, got '${now:-not executing}'"
+info "ws ${now} verified at ${DEST}"
