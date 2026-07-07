@@ -19,6 +19,8 @@ while iptables -t mangle -D PREROUTING -j XRAY      2>/dev/null; do :; done
 while iptables -t mangle -D OUTPUT     -j XRAY_SELF 2>/dev/null; do :; done
 while iptables -D INPUT -m mark --mark $MARK -j ACCEPT 2>/dev/null; do :; done
 iptables -t mangle -F XRAY      2>/dev/null || true; iptables -t mangle -X XRAY      2>/dev/null || true
+# DIVERT is referenced from XRAY, so it must be deleted after XRAY is gone.
+iptables -t mangle -F DIVERT    2>/dev/null || true; iptables -t mangle -X DIVERT    2>/dev/null || true
 iptables -t mangle -F XRAY_SELF 2>/dev/null || true; iptables -t mangle -X XRAY_SELF 2>/dev/null || true
 ip rule del fwmark $MARK lookup $TABLE 2>/dev/null || true
 ip route flush table $TABLE 2>/dev/null || true
@@ -65,11 +67,21 @@ ip route add local default dev lo table $TABLE
 # --- mangle PREROUTING: TPROXY forwarded dev-container traffic ---
 iptables -t mangle -N XRAY
 for net in "${PRIVATE[@]}"; do iptables -t mangle -A XRAY -d "$net" -j RETURN; done
-# Established flows already owned by a local transparent socket bypass re-TPROXY.
-# Guarded: if the xt_socket module is unavailable the rule is skipped and we fall
-# back to plain TPROXY (still correct), never aborting startup.
-iptables -t mangle -A XRAY -p tcp -m socket -j RETURN 2>/dev/null || true
-iptables -t mangle -A XRAY -p udp -m socket -j RETURN 2>/dev/null || true
+# Established flows already owned by a local transparent socket skip re-TPROXY,
+# but they MUST keep the fwmark (canonical DIVERT pattern). A bare RETURN here
+# strips the mark, so every packet after the first SYN misses the
+# `fwmark lookup $TABLE` policy route and leaks out the default route to the
+# real server -- the handshake never completes and forwarding is dead, while
+# self-egress (marked per-packet in OUTPUT) stays green.
+# Guarded: if the xt_socket module is unavailable the two jump rules are
+# skipped and we fall back to plain TPROXY (still correct, TPROXY does its own
+# socket lookup), never aborting startup; the unreferenced DIVERT chain is
+# then harmless.
+iptables -t mangle -N DIVERT
+iptables -t mangle -A DIVERT -j MARK --set-mark $MARK
+iptables -t mangle -A DIVERT -j ACCEPT
+iptables -t mangle -A XRAY -p tcp -m socket --transparent -j DIVERT 2>/dev/null || true
+iptables -t mangle -A XRAY -p udp -m socket --transparent -j DIVERT 2>/dev/null || true
 iptables -t mangle -A XRAY -p tcp -j TPROXY --on-port $PORT --tproxy-mark $MARK
 iptables -t mangle -A XRAY -p udp -j TPROXY --on-port $PORT --tproxy-mark $MARK
 iptables -t mangle -A PREROUTING -j XRAY
