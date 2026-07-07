@@ -25,8 +25,7 @@ ip route flush table $TABLE 2>/dev/null || true
 
 # --- kernel preconditions for TPROXY: reverse-path filtering OFF and
 #     route_localnet ON so marked, foreign-destined packets reach the local (lo)
-#     transparent socket. Per-interface because the effective rp_filter is
-#     max(conf.all, conf.<iface>), so every interface must read 0.
+#     transparent socket.
 #
 #     /proc/sys is mounted read-only inside a default container (runc's default
 #     readonlyPaths), so these writes can fail with EROFS even when the values
@@ -35,22 +34,29 @@ ip route flush table $TABLE 2>/dev/null || true
 #     pre-exists the sysctl pass so it needs explicit lo.* entries; eth0 inherits
 #     default.*). We therefore write best-effort and then ASSERT the effective
 #     state, failing closed only when a value is genuinely wrong (a real
-#     silent-drop risk), not merely because /proc/sys is read-only. ---
-for f in /proc/sys/net/ipv4/conf/*/rp_filter;      do echo 0 > "$f" 2>/dev/null || true; done
-for f in /proc/sys/net/ipv4/conf/*/route_localnet; do echo 1 > "$f" 2>/dev/null || true; done
+#     silent-drop risk), not merely because /proc/sys is read-only.
+#
+#     The ASSERT covers only interfaces the datapath uses (all/default/lo/eth0).
+#     Kernels with tunnel modules loaded (Docker Desktop VMs) auto-create
+#     fallback devices (gre0, sit0, tunl0, erspan0, ...) in every netns BEFORE
+#     docker applies --sysctl, so conf.default never reaches them; they carry no
+#     traffic, so their values cannot break TPROXY. Asserting them bricked
+#     startup on such hosts while CI (no tunnel modules) stayed green. ---
+for f in /proc/sys/net/ipv4/conf/*/rp_filter;      do echo 0 2>/dev/null > "$f" || true; done
+for f in /proc/sys/net/ipv4/conf/*/route_localnet; do echo 1 2>/dev/null > "$f" || true; done
 
 sysctl_bad=""
-for f in /proc/sys/net/ipv4/conf/*/rp_filter; do
-    [ "$(cat "$f")" = 0 ] || sysctl_bad="${sysctl_bad} ${f#/proc/sys/}=$(cat "$f")(want 0)"
-done
-for f in /proc/sys/net/ipv4/conf/*/route_localnet; do
-    [ "$(cat "$f")" = 1 ] || sysctl_bad="${sysctl_bad} ${f#/proc/sys/}=$(cat "$f")(want 1)"
+for ifc in all default lo eth0; do
+    d="/proc/sys/net/ipv4/conf/$ifc"
+    [ -d "$d" ] || continue
+    [ "$(cat "$d/rp_filter")" = 0 ]      || sysctl_bad="${sysctl_bad} ${d#/proc/sys/}/rp_filter=$(cat "$d/rp_filter")(want 0)"
+    [ "$(cat "$d/route_localnet")" = 1 ] || sysctl_bad="${sysctl_bad} ${d#/proc/sys/}/route_localnet=$(cat "$d/route_localnet")(want 1)"
 done
 if [ -n "$sysctl_bad" ]; then
     echo "ERROR: TPROXY sysctl preconditions unmet (read-only /proc/sys and not supplied via 'docker --sysctl'):${sysctl_bad}" >&2
     exit 1
 fi
-echo "tproxy sysctls verified (rp_filter=0, route_localnet=1 on all interfaces)"
+echo "tproxy sysctls verified (rp_filter=0, route_localnet=1 on all/default/lo/eth0)"
 
 # --- policy routing: deliver marked, foreign-destined packets to the local TPROXY socket ---
 ip rule add fwmark $MARK lookup $TABLE
