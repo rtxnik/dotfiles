@@ -134,6 +134,9 @@ teardown() {
   run run_bootstrap
   [ "$status" -eq 0 ]
   test -f "$WSDIR/rwctl/README.md"
+  # On a confirmed-ours checkout the recovery hint IS printed — this pins the
+  # positive direction against the foreign-worktree test's negative one below.
+  [[ "$output" == *"git -C $WSDIR/rwctl pull"* ]]
 }
 
 @test "rwctl_bootstrap_symlinks_the_conventional_path" {
@@ -175,12 +178,16 @@ teardown() {
   echo "mine" > "$WSDIR/rwctl/UNTRACKED.md"
   run run_bootstrap
   [ "$status" -eq 0 ]
+  bootstrap_output="$output"
   test -f "$WSDIR/rwctl/UNTRACKED.md"
   run git -C "$WSDIR/rwctl" remote get-url origin
   [ "$output" = "https://example.invalid/someone/other.git" ]
   # "Untouched" includes the conventional path: it must NOT be pointed at a
   # foreign tree, or the documented recovery command would target the wrong repo.
   [ ! -e "$FIXTURE/links/rwctl" ]
+  # The recovery hint must not be printed either — it would tell the operator
+  # to `git pull` inside a repository this script does not own.
+  [[ "$bootstrap_output" != *"git -C $WSDIR/rwctl pull"* ]]
 }
 
 @test "rwctl_bootstrap_recovers_a_workspace_created_before_the_first_push" {

@@ -82,8 +82,11 @@ mkdir -p "$CHECKOUT_ROOT" "$LINK_DIR"
 if sync_checkout; then
     ln -sfn "$CHECKOUT" "$LINK_DIR/rwctl"
     log "linked $LINK_DIR/rwctl -> $CHECKOUT"
+    log "Working tree: $CHECKOUT (host-persisted; $LINK_DIR/rwctl points at it)"
+    log "If this workspace was created before the repo had content, run: git -C $CHECKOUT pull"
 else
     log "checkout step incomplete — $LINK_DIR/rwctl left untouched; continuing with the toolchain install"
+    log "review the WARNING above and resolve the checkout by hand before trusting $LINK_DIR/rwctl"
 fi
 
 # --- Step 2: agent toolchain (absent from a fresh image) ---------------------
@@ -104,7 +107,5 @@ if [ "${RWCTL_SKIP_TOOLCHAIN:-0}" != "1" ]; then
 fi
 
 # --- Step 3: next steps ------------------------------------------------------
-log "Working tree: $CHECKOUT (host-persisted; $LINK_DIR/rwctl points at it)"
-log "If this workspace was created before the repo had content, run: git -C $CHECKOUT pull"
 log "Fabric adoption is a deliberate, reviewed step — author factory.json, then run 'factory install' from a complete v1.0.5 release directory."
 log "Setup complete"
