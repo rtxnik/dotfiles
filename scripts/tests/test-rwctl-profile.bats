@@ -234,3 +234,12 @@ teardown() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"clone failed"* ]]
 }
+
+@test "rwctl_readme_documents_the_load_bearing_decisions" {
+  [ -f "$PROFILE/README.md" ]
+  # These three are the decisions a reader must not have to rediscover.
+  for phrase in "Docker-in-Docker" "host-mounted workspace folder" "Not automatic"; do
+    run grep -F "$phrase" "$PROFILE/README.md"
+    [ "$status" -eq 0 ]
+  done
+}
