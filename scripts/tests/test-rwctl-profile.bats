@@ -119,7 +119,7 @@ teardown() {
   fi
 }
 
-@test "rwctl_bootstrap_activates_mise_before_tool_installs" {
+@test "rwctl_bootstrap_activates_mise" {
   run grep -F 'mise activate bash' "$SCRIPT"
   [ "$status" -eq 0 ]
 }
@@ -137,6 +137,21 @@ teardown() {
   # On a confirmed-ours checkout the recovery hint IS printed — this pins the
   # positive direction against the foreign-worktree test's negative one below.
   [[ "$output" == *"git -C $WSDIR/rwctl pull"* ]]
+}
+
+@test "rwctl_bootstrap_defaults_checkout_root_to_pwd_when_unset" {
+  setup_rwctl_fixture
+  # RWCTL_CHECKOUT_ROOT is deliberately absent — CHECKOUT_ROOT must fall back
+  # to $PWD, which is why this test cd's into the workspace dir itself rather
+  # than passing it through the env var like every other test in this file.
+  cd "$WSDIR"
+  run env RWCTL_REPO_SSH="$REMOTE" \
+      RWCTL_REPO_SLUG="rwctl.git" \
+      RWCTL_LINK_DIR="$FIXTURE/links" \
+      RWCTL_SKIP_TOOLCHAIN=1 \
+      bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  test -f "$WSDIR/rwctl/README.md"
 }
 
 @test "rwctl_bootstrap_symlinks_the_conventional_path" {
@@ -187,6 +202,48 @@ teardown() {
   [ ! -e "$FIXTURE/links/rwctl" ]
   # The recovery hint must not be printed either — it would tell the operator
   # to `git pull` inside a repository this script does not own.
+  [[ "$bootstrap_output" != *"git -C $WSDIR/rwctl pull"* ]]
+}
+
+@test "rwctl_bootstrap_treats_a_slug_prefixed_foreign_origin_as_foreign" {
+  setup_rwctl_fixture
+  # A second, unrelated but REACHABLE repo whose path is REPO_SLUG plus a
+  # suffix ("rwctl-mirror.git" extends "rwctl"). Reachability matters: an
+  # unanchored substring match would not just misclassify this origin, it
+  # would let the script actually fetch and pull from it, so the test must
+  # give the bug something real to adopt or a network failure would mask it.
+  MIRROR="$FIXTURE/rtxnik/rwctl-mirror.git"
+  mkdir -p "$(dirname "$MIRROR")"
+  git init --quiet --bare --initial-branch=main "$MIRROR"
+  MIRROR_SEED="$FIXTURE/mirror-seed"
+  git init --quiet --initial-branch=main "$MIRROR_SEED"
+  git -C "$MIRROR_SEED" config user.email "test@example.invalid"
+  git -C "$MIRROR_SEED" config user.name "rwctl profile test"
+  echo "not ours" > "$MIRROR_SEED/MIRROR.md"
+  git -C "$MIRROR_SEED" add MIRROR.md
+  git -C "$MIRROR_SEED" commit --quiet -m "mirror seed"
+  git -C "$MIRROR_SEED" remote add origin "$MIRROR"
+  git -C "$MIRROR_SEED" push --quiet origin main
+
+  mkdir -p "$WSDIR/rwctl"
+  git init --quiet --initial-branch=main "$WSDIR/rwctl"
+  git -C "$WSDIR/rwctl" remote add origin "$MIRROR"
+  echo "mine" > "$WSDIR/rwctl/UNTRACKED.md"
+  run env RWCTL_REPO_SSH="$REMOTE" \
+      RWCTL_REPO_SLUG="rtxnik/rwctl" \
+      RWCTL_CHECKOUT_ROOT="$WSDIR" \
+      RWCTL_LINK_DIR="$FIXTURE/links" \
+      RWCTL_SKIP_TOOLCHAIN=1 \
+      bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  bootstrap_output="$output"
+  test -f "$WSDIR/rwctl/UNTRACKED.md"
+  # The mirror's content must never land here — that would mean the script
+  # adopted a repository it does not own.
+  test ! -f "$WSDIR/rwctl/MIRROR.md"
+  run git -C "$WSDIR/rwctl" remote get-url origin
+  [ "$output" = "$MIRROR" ]
+  [ ! -e "$FIXTURE/links/rwctl" ]
   [[ "$bootstrap_output" != *"git -C $WSDIR/rwctl pull"* ]]
 }
 

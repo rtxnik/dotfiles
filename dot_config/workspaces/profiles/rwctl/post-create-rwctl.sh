@@ -32,8 +32,11 @@ sync_checkout() {
             return 1
         fi
         log "Cloning $REPO_SLUG into $CHECKOUT"
-        if ! git clone "$REPO_SSH" "$CHECKOUT" 2>/dev/null; then
-            if ! gh repo clone "$REPO_SLUG" "$CHECKOUT" 2>/dev/null; then
+        local clone_err gh_err
+        if ! clone_err="$(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new" git clone "$REPO_SSH" "$CHECKOUT" 2>&1)"; then
+            log "git clone failed: $(printf '%s\n' "$clone_err" | tail -n1)"
+            if ! gh_err="$(GIT_TERMINAL_PROMPT=0 gh repo clone "$REPO_SLUG" "$CHECKOUT" 2>&1)"; then
+                log "gh repo clone failed: $(printf '%s\n' "$gh_err" | tail -n1)"
                 log "clone failed — authenticate first (ssh-add, or gh auth login), then run: git clone $REPO_SSH $CHECKOUT"
                 return 1
             fi
@@ -44,7 +47,7 @@ sync_checkout() {
     local origin
     origin="$(git -C "$CHECKOUT" remote get-url origin 2>/dev/null || true)"
     case "$origin" in
-    *"$REPO_SLUG"*) : ;;
+    *"$REPO_SLUG" | *"$REPO_SLUG".git | *"$REPO_SLUG"/) : ;;
     *)
         log "WARNING: $CHECKOUT has origin '$origin', expected $REPO_SLUG — leaving it untouched"
         return 1
@@ -80,9 +83,13 @@ mkdir -p "$CHECKOUT_ROOT" "$LINK_DIR"
 # unreachable tree must not capture the conventional path, or the recovery
 # command this script prints would operate on the wrong repository.
 if sync_checkout; then
-    ln -sfn "$CHECKOUT" "$LINK_DIR/rwctl"
-    log "linked $LINK_DIR/rwctl -> $CHECKOUT"
-    log "Working tree: $CHECKOUT (host-persisted; $LINK_DIR/rwctl points at it)"
+    if [ -e "$LINK_DIR/rwctl" ] && [ ! -L "$LINK_DIR/rwctl" ]; then
+        log "WARNING: $LINK_DIR/rwctl exists and is not a symlink — leaving it untouched"
+    else
+        ln -sfn "$CHECKOUT" "$LINK_DIR/rwctl"
+        log "linked $LINK_DIR/rwctl -> $CHECKOUT"
+    fi
+    log "Working tree: $CHECKOUT (host-persisted)"
     log "If this workspace was created before the repo had content, run: git -C $CHECKOUT pull"
 else
     log "checkout step incomplete — $LINK_DIR/rwctl left untouched; continuing with the toolchain install"

@@ -43,8 +43,13 @@ rebuild or `ws delete`, so a checkout there puts unpushed work one container
 lifecycle away from unrecoverable loss. `~/projects/rwctl` is a symlink to the
 real, host-persisted tree.
 
+If the symlink is absent — most likely because the first boot ran before SSH
+or `gh` were authenticated against the private repo — read the `[rwctl]
+WARNING` line in the container create log, then clone by hand into the
+workspace folder.
+
 If the workspace was created before the repository had content, the first push
-is picked up on the next container start — or immediately with:
+is picked up on the next rebuild — or immediately with:
 
 ```bash
 git -C ~/projects/rwctl pull
