@@ -1,0 +1,15 @@
+[settings.node]
+gpg_verify = false
+
+[tools]
+# Pinned to the project's CI GO_VERSION. A local toolchain ahead of CI is a
+# standing source of green-locally / red-in-CI.
+go = "1.25"
+golangci-lint = "latest"
+goreleaser = "latest"
+node = "lts"
+jq = "latest"
+yq = "latest"
+fzf = "latest"
+ripgrep = "latest"
+fd = "latest"
