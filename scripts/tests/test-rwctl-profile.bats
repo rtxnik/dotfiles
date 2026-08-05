@@ -19,6 +19,17 @@ PROFILE="$REPO_ROOT/dot_config/workspaces/profiles/rwctl"
   [ "$status" -eq 0 ]
 }
 
+# The ubuntu-24.04 base carries neither. The fabric's large-file-guard test
+# suite shells out to python3, and its serena integration check needs PyYAML.
+@test "rwctl_dockerfile_installs_python_for_the_fabric_gates" {
+  # Anchored on whitespace, not -w: under -w the "python3" probe would also be
+  # satisfied by "python3-yaml" alone and pass without the interpreter.
+  for pkg in python3 python3-yaml; do
+    run grep -E "(^|[[:space:]])${pkg}([[:space:]]|\\\\|\$)" "$PROFILE/Dockerfile"
+    [ "$status" -eq 0 ]
+  done
+}
+
 @test "rwctl_dockerfile_omits_openssl" {
   # The file must exist first: grep also exits non-zero on a missing file, so a
   # bare absence-check would pass vacuously during the red phase.
@@ -42,6 +53,35 @@ PROFILE="$REPO_ROOT/dot_config/workspaces/profiles/rwctl"
   for tool in golangci-lint goreleaser node jq yq fzf ripgrep fd; do
     run grep -E "^${tool}[[:space:]]*=" "$PROFILE/mise.toml"
     [ "$status" -eq 0 ]
+  done
+}
+
+# The fabric's vendored gate suites run inside this container, so the profile
+# has to carry their toolchain even though the product itself never uses it.
+@test "rwctl_mise_carries_the_fabric_gate_tools" {
+  for tool in shellcheck shfmt bats bun; do
+    run grep -E "^${tool}[[:space:]]*=" "$PROFILE/mise.toml"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# shellcheck 0.10+ adds checks that fail code which is clean under 0.9, so a
+# floating pin reds the vendored suites on code nobody touched.
+@test "rwctl_mise_pins_shellcheck_to_the_hook_authoring_version" {
+  run grep -Ex 'shellcheck[[:space:]]*=[[:space:]]*"0\.9\.0"' "$PROFILE/mise.toml"
+  [ "$status" -eq 0 ]
+}
+
+@test "rwctl_mise_pins_shfmt" {
+  run grep -Ex 'shfmt[[:space:]]*=[[:space:]]*"3\.13\.1"' "$PROFILE/mise.toml"
+  [ "$status" -eq 0 ]
+}
+
+@test "rwctl_mise_has_no_floating_shellcheck_or_shfmt" {
+  [ -f "$PROFILE/mise.toml" ]
+  for tool in shellcheck shfmt; do
+    run grep -Ex "${tool}[[:space:]]*=[[:space:]]*\"latest\"" "$PROFILE/mise.toml"
+    [ "$status" -ne 0 ]
   done
 }
 
