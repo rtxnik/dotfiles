@@ -19,6 +19,17 @@ PROFILE="$REPO_ROOT/dot_config/workspaces/profiles/rwctl"
   [ "$status" -eq 0 ]
 }
 
+# The ubuntu-24.04 base carries neither. The fabric's large-file-guard test
+# suite shells out to python3, and its serena integration check needs PyYAML.
+@test "rwctl_dockerfile_installs_python_for_the_fabric_gates" {
+  # Anchored on whitespace, not -w: under -w the "python3" probe would also be
+  # satisfied by "python3-yaml" alone and pass without the interpreter.
+  for pkg in python3 python3-yaml; do
+    run grep -E "(^|[[:space:]])${pkg}([[:space:]]|\\\\|\$)" "$PROFILE/Dockerfile"
+    [ "$status" -eq 0 ]
+  done
+}
+
 @test "rwctl_dockerfile_omits_openssl" {
   # The file must exist first: grep also exits non-zero on a missing file, so a
   # bare absence-check would pass vacuously during the red phase.
@@ -42,6 +53,35 @@ PROFILE="$REPO_ROOT/dot_config/workspaces/profiles/rwctl"
   for tool in golangci-lint goreleaser node jq yq fzf ripgrep fd; do
     run grep -E "^${tool}[[:space:]]*=" "$PROFILE/mise.toml"
     [ "$status" -eq 0 ]
+  done
+}
+
+# The fabric's vendored gate suites run inside this container, so the profile
+# has to carry their toolchain even though the product itself never uses it.
+@test "rwctl_mise_carries_the_fabric_gate_tools" {
+  for tool in shellcheck shfmt bats bun; do
+    run grep -E "^${tool}[[:space:]]*=" "$PROFILE/mise.toml"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# shellcheck 0.10+ adds checks that fail code which is clean under 0.9, so a
+# floating pin reds the vendored suites on code nobody touched.
+@test "rwctl_mise_pins_shellcheck_to_the_hook_authoring_version" {
+  run grep -Ex 'shellcheck[[:space:]]*=[[:space:]]*"0\.9\.0"' "$PROFILE/mise.toml"
+  [ "$status" -eq 0 ]
+}
+
+@test "rwctl_mise_pins_shfmt" {
+  run grep -Ex 'shfmt[[:space:]]*=[[:space:]]*"3\.13\.1"' "$PROFILE/mise.toml"
+  [ "$status" -eq 0 ]
+}
+
+@test "rwctl_mise_has_no_floating_shellcheck_or_shfmt" {
+  [ -f "$PROFILE/mise.toml" ]
+  for tool in shellcheck shfmt; do
+    run grep -Ex "${tool}[[:space:]]*=[[:space:]]*\"latest\"" "$PROFILE/mise.toml"
+    [ "$status" -ne 0 ]
   done
 }
 
@@ -126,6 +166,27 @@ teardown() {
 
 @test "rwctl_bootstrap_pins_the_factory_cli_to_an_immutable_tag" {
   run grep -F 'workflow-factory@v1.0.5#subdirectory=tooling' "$SCRIPT"
+  [ "$status" -eq 0 ]
+}
+
+# The factory repo is private and post-create has the forwarded SSH agent but no
+# git credential helper, so an HTTPS-only install fails and the `|| log` guard
+# hides it. Both transports must be present, SSH must be attempted first, and
+# the fallback must be pinned to the same tag.
+@test "rwctl_bootstrap_installs_the_factory_cli_over_ssh_first" {
+  ssh_line="$(grep -nF 'git+ssh://git@github.com/rtxnik/workflow-factory.git@v1.0.5#subdirectory=tooling' "$SCRIPT" | head -n1 | cut -d: -f1)"
+  https_line="$(grep -nF 'git+https://github.com/rtxnik/workflow-factory@v1.0.5#subdirectory=tooling' "$SCRIPT" | head -n1 | cut -d: -f1)"
+  [ -n "$ssh_line" ]
+  [ -n "$https_line" ]
+  [ "$ssh_line" -lt "$https_line" ]
+}
+
+# BatchMode keeps a missing key a fast failure instead of an interactive prompt
+# that would hang the container create.
+@test "rwctl_bootstrap_factory_ssh_install_is_non_interactive" {
+  run grep -F 'GIT_SSH_COMMAND="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new"' "$SCRIPT"
+  [ "$status" -eq 0 ]
+  run grep -F 'GIT_TERMINAL_PROMPT=0' "$SCRIPT"
   [ "$status" -eq 0 ]
 }
 
@@ -296,6 +357,38 @@ teardown() {
   [ -f "$PROFILE/README.md" ]
   # These three are the decisions a reader must not have to rediscover.
   for phrase in "Docker-in-Docker" "host-mounted workspace folder" "Not automatic"; do
+    run grep -F "$phrase" "$PROFILE/README.md"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# The fabric probes these four but installs none of them, so a missing one
+# surfaces only as a failed `factory verify` — the README is the only warning.
+@test "rwctl_readme_lists_the_fabric_host_prerequisites" {
+  [ -f "$PROFILE/README.md" ]
+  for phrase in "gitleaks@8.30.1" "superpowers@claude-plugins-official" \
+    "claude-mem@thedotmack" "uv tool install serena-agent"; do
+    run grep -F "$phrase" "$PROFILE/README.md"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# A default local-scope registration lands in .projects[...] and the factory's
+# top-level `.mcpServers.serena` probe cannot see it.
+@test "rwctl_readme_warns_that_serena_needs_user_scope" {
+  [ -f "$PROFILE/README.md" ]
+  run grep -F -- "--scope user" "$PROFILE/README.md"
+  [ "$status" -eq 0 ]
+  run grep -F "jq -e '.mcpServers.serena' ~/.claude.json" "$PROFILE/README.md"
+  [ "$status" -eq 0 ]
+}
+
+# check-integration-rubric.sh greps $ROOT/CLAUDE.md; without that file the
+# vendored integration-check gate is red and the message names the rubric,
+# not the missing file.
+@test "rwctl_readme_states_the_consumer_claude_md_obligation" {
+  [ -f "$PROFILE/README.md" ]
+  for phrase in "CLAUDE.md" "review-rubric.md" "check-integration-rubric.sh"; do
     run grep -F "$phrase" "$PROFILE/README.md"
     [ "$status" -eq 0 ]
   done

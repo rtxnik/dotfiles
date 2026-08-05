@@ -13,3 +13,14 @@ yq = "latest"
 fzf = "latest"
 ripgrep = "latest"
 fd = "latest"
+
+# The development fabric runs its own gate suites in this container, and they
+# need a toolchain the product itself never uses. shellcheck is pinned to the
+# version the fabric's hooks were authored against: 0.10 and later add checks
+# that fail code which is clean under 0.9, so a floating shellcheck turns the
+# vendored suites red on code nobody touched.
+shellcheck = "0.9.0"
+shfmt = "3.13.1"
+bats = "latest"
+# The claude-mem SessionStart hook runs under bun.
+bun = "latest"
