@@ -129,6 +129,27 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
+# The factory repo is private and post-create has the forwarded SSH agent but no
+# git credential helper, so an HTTPS-only install fails and the `|| log` guard
+# hides it. Both transports must be present, SSH must be attempted first, and
+# the fallback must be pinned to the same tag.
+@test "rwctl_bootstrap_installs_the_factory_cli_over_ssh_first" {
+  ssh_line="$(grep -nF 'git+ssh://git@github.com/rtxnik/workflow-factory.git@v1.0.5#subdirectory=tooling' "$SCRIPT" | head -n1 | cut -d: -f1)"
+  https_line="$(grep -nF 'git+https://github.com/rtxnik/workflow-factory@v1.0.5#subdirectory=tooling' "$SCRIPT" | head -n1 | cut -d: -f1)"
+  [ -n "$ssh_line" ]
+  [ -n "$https_line" ]
+  [ "$ssh_line" -lt "$https_line" ]
+}
+
+# BatchMode keeps a missing key a fast failure instead of an interactive prompt
+# that would hang the container create.
+@test "rwctl_bootstrap_factory_ssh_install_is_non_interactive" {
+  run grep -F 'GIT_SSH_COMMAND="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new"' "$SCRIPT"
+  [ "$status" -eq 0 ]
+  run grep -F 'GIT_TERMINAL_PROMPT=0' "$SCRIPT"
+  [ "$status" -eq 0 ]
+}
+
 @test "rwctl_bootstrap_clones_into_the_workspace_folder_not_home_projects" {
   setup_rwctl_fixture
   run run_bootstrap

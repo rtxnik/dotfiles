@@ -106,10 +106,21 @@ if [ "${RWCTL_SKIP_TOOLCHAIN:-0}" != "1" ]; then
         log "Installing Claude Code"
         curl -fsSL https://claude.ai/install.sh | bash || log "claude install failed"
     fi
+    # workflow-factory is a private repo. At post-create time the container has
+    # the forwarded SSH agent but no git credential helper yet, so the HTTPS form
+    # cannot authenticate and the guard below swallows the failure. Try SSH
+    # first and keep HTTPS as the fallback — the same order sync_checkout uses
+    # for the product checkout.
     if ! command -v factory >/dev/null 2>&1 && command -v uv >/dev/null 2>&1; then
         log "Installing the pinned factory CLI (v1.0.5)"
-        uv tool install "git+https://github.com/rtxnik/workflow-factory@v1.0.5#subdirectory=tooling" ||
-            log "factory CLI install failed"
+        if ! GIT_TERMINAL_PROMPT=0 \
+            GIT_SSH_COMMAND="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
+            uv tool install "git+ssh://git@github.com/rtxnik/workflow-factory.git@v1.0.5#subdirectory=tooling"; then
+            log "factory CLI install over SSH failed — retrying over HTTPS"
+            GIT_TERMINAL_PROMPT=0 \
+                uv tool install "git+https://github.com/rtxnik/workflow-factory@v1.0.5#subdirectory=tooling" ||
+                log "factory CLI install failed — the repo is private: add your key (ssh-add) or configure a git credential helper, then install by hand"
+        fi
     fi
 fi
 
