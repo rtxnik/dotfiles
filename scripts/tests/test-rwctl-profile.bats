@@ -361,3 +361,35 @@ teardown() {
     [ "$status" -eq 0 ]
   done
 }
+
+# The fabric probes these four but installs none of them, so a missing one
+# surfaces only as a failed `factory verify` — the README is the only warning.
+@test "rwctl_readme_lists_the_fabric_host_prerequisites" {
+  [ -f "$PROFILE/README.md" ]
+  for phrase in "gitleaks@8.30.1" "superpowers@claude-plugins-official" \
+    "claude-mem@thedotmack" "uv tool install serena-agent"; do
+    run grep -F "$phrase" "$PROFILE/README.md"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# A default local-scope registration lands in .projects[...] and the factory's
+# top-level `.mcpServers.serena` probe cannot see it.
+@test "rwctl_readme_warns_that_serena_needs_user_scope" {
+  [ -f "$PROFILE/README.md" ]
+  run grep -F -- "--scope user" "$PROFILE/README.md"
+  [ "$status" -eq 0 ]
+  run grep -F "jq -e '.mcpServers.serena' ~/.claude.json" "$PROFILE/README.md"
+  [ "$status" -eq 0 ]
+}
+
+# check-integration-rubric.sh greps $ROOT/CLAUDE.md; without that file the
+# vendored integration-check gate is red and the message names the rubric,
+# not the missing file.
+@test "rwctl_readme_states_the_consumer_claude_md_obligation" {
+  [ -f "$PROFILE/README.md" ]
+  for phrase in "CLAUDE.md" "review-rubric.md" "check-integration-rubric.sh"; do
+    run grep -F "$phrase" "$PROFILE/README.md"
+    [ "$status" -eq 0 ]
+  done
+}
