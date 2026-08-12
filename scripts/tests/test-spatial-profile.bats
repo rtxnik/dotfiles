@@ -104,8 +104,7 @@ payload_has() { # <payload> <pkg>
 
 @test "spatial_mise_carries_the_toolchain" {
   for tool in uv ruff pandoc typst node pnpm jq yq fzf ripgrep fd; do
-    run grep -E "^${tool}[[:space:]]*=" "$PROFILE/mise.toml"
-    [ "$status" -eq 0 ]
+    grep -qE "^${tool}[[:space:]]*=" "$PROFILE/mise.toml" || { echo "missing: $tool"; return 1; }
   done
 }
 
@@ -313,10 +312,24 @@ DOCTOR="$PROFILE/doctor.sh"
   [ "$status" -eq 0 ]
 }
 
-@test "spatial_doctor_probe_strings_carry_no_digits" {
-  [ -f "$DOCTOR" ]
-  run grep -E 'ink\("[^"]*[0-9]' "$DOCTOR"
+# Digits render from any font, so a digit anywhere in the probe string defeats
+# the .notdef comparison: the render stops being byte-identical to the glyphless
+# reference and the self-check passes in a container with no Cyrillic support.
+# The probe therefore refuses such a string rather than assuming it never gets one.
+@test "spatial_doctor_probe_rejects_a_probe_string_containing_digits" {
+  if ! command -v uv >/dev/null 2>&1; then skip "uv not installed"; fi
+  if [ ! -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]; then skip "DejaVu absent"; fi
+  PROBE="$(mktemp -t spatial-probe-XXXXXXXX.py)"
+  sed -n "/^cat > \"\$probe\" <<'PY'\$/,/^PY\$/p" "$DOCTOR" | sed '1d;$d' > "$PROBE"
+  [ -s "$PROBE" ]
+  run env SPATIAL_CYRILLIC_PROBE='Усово 569' \
+      SPATIAL_FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+      uv run --no-project --python 3.12 --python-preference only-system \
+      --with pandas --with numpy --with opencv-python-headless \
+      --with pillow --with cairosvg --with openpyxl python "$PROBE"
+  rm -f "$PROBE"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"digits"* ]]
 }
 
 # The greps above pin the shape; this runs the real thing. Skipped where uv is
@@ -359,7 +372,7 @@ DOCTOR="$PROFILE/doctor.sh"
 
 # Version arithmetic says what should work; a conversion says what does.
 @test "spatial_doctor_converts_a_document_rather_than_reading_a_version" {
-  run grep -F -- '--pdf-engine=typst' "$DOCTOR"
+  run grep -F -- 'pandoc --pdf-engine=typst' "$DOCTOR"
   [ "$status" -eq 0 ]
   run grep -F -- '-s "$tmp/out.pdf"' "$DOCTOR"
   [ "$status" -eq 0 ]
@@ -368,7 +381,7 @@ DOCTOR="$PROFILE/doctor.sh"
 # The package probe must not depend on the folder the container happens to be
 # sitting in: the profile is what is under test, not somebody's project.
 @test "spatial_doctor_probes_packages_outside_any_project" {
-  run grep -F -- '--no-project' "$DOCTOR"
+  run grep -F -- 'uv run --no-project' "$DOCTOR"
   [ "$status" -eq 0 ]
 }
 
@@ -497,7 +510,7 @@ SEED="$PROFILE/seed"
   rm -rf "$WORK"
 }
 
-@test "spatial_seed_makefile_runs_a_present_script" {
+@test "spatial_seed_makefile_names_the_script_in_its_recipe" {
   WORK="$(mktemp -d -t spatial-make-XXXXXXXX)"
   cp "$SEED/Makefile" "$WORK/"
   mkdir -p "$WORK/scripts"

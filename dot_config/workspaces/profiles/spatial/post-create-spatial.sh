@@ -95,9 +95,13 @@ fi
 # --- Step 5: prove the container ---------------------------------------------
 # Advisory at this point: a network hiccup in step 3 must not abort container
 # creation. The table is the record; the exit code is logged, not propagated.
-if [ "${SPATIAL_SKIP_DOCTOR:-0}" != "1" ] && [ -f "$DOCTOR" ]; then
-    log "running the environment self-check"
-    bash "$DOCTOR" || log "self-check reported failures — rerun with: bash $DOCTOR"
+if [ "${SPATIAL_SKIP_DOCTOR:-0}" != "1" ]; then
+    if [ -f "$DOCTOR" ]; then
+        log "running the environment self-check"
+        bash "$DOCTOR" || log "self-check reported failures — rerun with: bash $DOCTOR"
+    else
+        log "self-check not found at $DOCTOR — skipping"
+    fi
 fi
 
 log "Setup complete"

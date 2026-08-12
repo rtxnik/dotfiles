@@ -56,6 +56,8 @@ def ink(png_bytes):
 
 
 probe_text = os.environ.get("SPATIAL_CYRILLIC_PROBE", "Усово")
+if any(ch.isdigit() for ch in probe_text):
+    sys.exit("the Cyrillic probe string must not contain digits: they render from any font, so the .notdef comparison would pass in a container with no Cyrillic support")
 blank_png = render("")
 latin_png = render("Usovo")
 cyrillic_png = render(probe_text)
@@ -63,8 +65,8 @@ cyrillic_png = render(probe_text)
 # to the codepoint asked for: two different glyphless strings render identically.
 # That blindness is the detector. Same length as the Cyrillic probe so the boxes
 # line up.
-ref_a = render("⿠⿡⿢⿣⿤")
-ref_b = render("⿥⿦⿧⿨⿩")
+ref_a = render("⿠" * len(probe_text))
+ref_b = render("⿥" * len(probe_text))
 
 blank, latin, cyrillic = ink(blank_png), ink(latin_png), ink(cyrillic_png)
 print(f"cairosvg blank={blank} latin={latin} cyrillic={cyrillic} notdef={ink(ref_a)} interp={sys.executable}")
