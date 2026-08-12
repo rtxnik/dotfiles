@@ -27,7 +27,7 @@ dot_config/bws/state
 # into $HOME by chezmoi.
 scripts/ci
 scripts/lib
-scripts/tests/test-*.sh
+scripts/tests
 scripts/check-integration-*.sh
 scripts/integration-check.sh
 scripts/gen-hooks-readme.sh

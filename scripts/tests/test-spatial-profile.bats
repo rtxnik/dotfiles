@@ -527,3 +527,59 @@ SEED="$PROFILE/seed"
     [[ "$line" == *"$d"* ]] || { echo "make all depends on $d, not named in CLAUDE.md: $line"; return 1; }
   done
 }
+
+@test "spatial_readme_documents_the_load_bearing_decisions" {
+  for phrase in "libglib2.0-0t64" "3.1.11" "opencv-python-headless" "policy.xml"; do
+    run grep -F "$phrase" "$PROFILE/README.md"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# The rule that keeps unpushed work off container-local storage is the one a
+# reader most needs and least expects.
+@test "spatial_readme_states_where_the_work_lives" {
+  run grep -F 'host-mounted' "$PROFILE/README.md"
+  [ "$status" -eq 0 ]
+  run grep -F 'does not survive' "$PROFILE/README.md"
+  [ "$status" -eq 0 ]
+}
+
+@test "spatial_readme_documents_the_manual_seed_path" {
+  run grep -F 'cp -rn ~/.config/workspaces/profiles/spatial/seed/. .' "$PROFILE/README.md"
+  [ "$status" -eq 0 ]
+}
+
+@test "spatial_is_listed_in_the_profiles_index" {
+  run grep -E '^\| `spatial` \|' "$REPO_ROOT/dot_config/workspaces/README.md"
+  [ "$status" -eq 0 ]
+}
+
+# The bootstrap, the self-check and the seed all arrive over the network on first
+# boot, and the shared script fails open when they do not. An operator who does
+# not know the symptom reads a silent container as a working one.
+@test "spatial_readme_states_the_first_boot_network_dependency" {
+  run grep -F 'First boot needs network' "$PROFILE/README.md"
+  [ "$status" -eq 0 ]
+  run grep -F 'no `[spatial]` lines at all' "$PROFILE/README.md"
+  [ "$status" -eq 0 ]
+}
+
+# .chezmoiignore already excludes scripts/ci, scripts/lib and
+# scripts/tests/test-*.sh under "repo tooling must never be copied into $HOME".
+# The rule simply misses the .bats extension, so 14 gate files are applied into
+# every machine's home directory today and this PR would add a fifteenth.
+@test "chezmoiignore_excludes_the_repo_test_suites" {
+  run grep -Ex 'scripts/tests' "$REPO_ROOT/.chezmoiignore"
+  [ "$status" -eq 0 ]
+}
+
+# The rule this branch completed covers scripts/tests only. The root tests/
+# directory has never had an entry and is out of scope here; asserting the
+# repo-wide count would encode a claim this change does not make.
+@test "chezmoiignore_keeps_scripts_tests_out_of_home" {
+  if ! command -v chezmoi >/dev/null 2>&1; then skip "chezmoi not installed"; fi
+  managed="$(chezmoi managed --source "$REPO_ROOT")"
+  [ -n "$managed" ]
+  run bash -c "printf '%s\n' \"\$1\" | grep '\\.bats\$' | grep -c '^scripts/tests/'" _ "$managed"
+  [ "$output" = "0" ]
+}
