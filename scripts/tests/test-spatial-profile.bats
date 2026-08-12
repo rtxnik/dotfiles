@@ -173,6 +173,26 @@ teardown() {
   done
 }
 
+# A workspace folder is not "already a project" just because something landed
+# in it — only pyproject.toml or .git say that. An unrelated file (a stray
+# README a user dropped, a downloaded asset) must not stop the seed, and the
+# copy's own exit status must not gate the outcome either: `cp -r
+# --update=none` still copies everything the seed carries and the completeness
+# check, not the copy's status, is what decides.
+@test "spatial_bootstrap_seeds_completely_over_a_folder_holding_an_unrelated_file" {
+  setup_spatial_fixture
+  echo "not a project marker" > "$WSDIR/NOTES.txt"
+  run run_bootstrap
+  [ "$status" -eq 0 ]
+  test -f "$WSDIR/pyproject.toml"
+  test -f "$WSDIR/Makefile"
+  test -f "$WSDIR/.gitignore"
+  test -f "$WSDIR/NOTES.txt"
+  for d in model source scripts tests out docs; do
+    test -d "$WSDIR/$d"
+  done
+}
+
 @test "spatial_bootstrap_refuses_to_seed_over_an_existing_project" {
   setup_spatial_fixture
   printf '[project]\nname = "mine"\n' > "$WSDIR/pyproject.toml"
@@ -187,8 +207,10 @@ teardown() {
   [ "$status" -eq 0 ]
   # ...and the seed did not land alongside it.
   [ ! -f "$WSDIR/Makefile" ]
-  # The manual path is printed, otherwise the skeleton is unreachable.
-  [[ "$bootstrap_output" == *"cp -rn $SEEDSRC/. $WSDIR/"* ]]
+  # The manual path is printed, otherwise the skeleton is unreachable. It must
+  # carry the directory skeleton too, not just the copy — mkdir -p never ran
+  # for this project since the seed was skipped entirely.
+  [[ "$bootstrap_output" == *"cp -r --update=none $SEEDSRC/. $WSDIR/ && mkdir -p $WSDIR/model $WSDIR/source $WSDIR/scripts $WSDIR/tests $WSDIR/out $WSDIR/docs"* ]]
 }
 
 @test "spatial_bootstrap_refuses_to_seed_over_a_git_checkout" {
@@ -251,7 +273,7 @@ teardown() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"seed is incomplete"* ]]
   [[ "$output" == *"Makefile"* ]]
-  [[ "$output" == *"cp -rn $SEEDSRC/. $WSDIR/"* ]]
+  [[ "$output" == *"cp -r --update=none $SEEDSRC/. $WSDIR/"* ]]
 }
 
 # The shared post-create.sh calls this script with no `|| true` under its own
@@ -370,11 +392,19 @@ DOCTOR="$PROFILE/doctor.sh"
   [[ "$output" == *"notdef boxes"* ]]
 }
 
-# Version arithmetic says what should work; a conversion says what does.
+# Version arithmetic says what should work; a conversion says what does. A
+# non-empty PDF only proves pandoc ran — it does not prove the Cyrillic
+# survived, since silent glyph loss still produces a perfectly non-empty PDF.
+# So this also pins the round trip back through pdftotext, anchored on the
+# commands rather than on any comment.
 @test "spatial_doctor_converts_a_document_rather_than_reading_a_version" {
   run grep -F -- 'pandoc --pdf-engine=typst' "$DOCTOR"
   [ "$status" -eq 0 ]
   run grep -F -- '-s "$tmp/out.pdf"' "$DOCTOR"
+  [ "$status" -eq 0 ]
+  run grep -F -- 'pdftotext' "$DOCTOR"
+  [ "$status" -eq 0 ]
+  run grep -F -- "grep -q 'Проверка'" "$DOCTOR"
   [ "$status" -eq 0 ]
 }
 
@@ -431,6 +461,15 @@ for a in "$@"; do
 done
 [ -n "$out" ] && echo "%PDF-1.7 stub" > "$out"
 EOF
+  # The pandoc stub's output is not a real PDF, so a real pdftotext could not
+  # extract anything from it. This stub stands in for the whole "pdftotext
+  # recovered the word" half of the round trip, same as the pandoc stub stands
+  # in for "typst produced a PDF" — the accounting under test is doctor.sh's,
+  # not pdftotext's.
+  cat > "$STUBS/pdftotext" <<'EOF'
+#!/bin/sh
+echo "Проверка" > "$2"
+EOF
   for t in node pnpm pdftoppm convert; do
     printf '#!/bin/sh\necho "%s stub 1.0"\n' "$t" > "$STUBS/$t"
   done
@@ -486,6 +525,49 @@ SEED="$PROFILE/seed"
     run grep -E "^${target}:" "$SEED/Makefile"
     [ "$status" -eq 0 ]
   done
+}
+
+# pytest's exit 5 ("no tests ran") is the design's own forbidden shape when
+# mapped to success unconditionally: "a test file that passes because it has
+# nothing to check reports green for no reason." It must stay success only
+# when tests/ carries no Python files at all.
+setup_make_test_fixture() {
+  MTFIXTURE="$(mktemp -d -t spatial-make-test-XXXXXXXX)"
+  cp "$SEED/Makefile" "$MTFIXTURE/"
+  cat > "$MTFIXTURE/pyproject.toml" <<'EOF'
+[project]
+name = "make-test-fixture"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8.3"]
+EOF
+}
+
+@test "spatial_seed_make_test_passes_with_no_test_files_at_all" {
+  if ! command -v uv >/dev/null 2>&1; then skip "uv not installed"; fi
+  setup_make_test_fixture
+  run make -C "$MTFIXTURE" test
+  rm -rf "$MTFIXTURE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"no model invariants written yet"* ]]
+}
+
+# The case that used to be silently green: tests/ holds a Python file, but it
+# collects zero test items (a helper module, a fixture-only file, a typo'd test
+# name). pytest still exits 5 here — the old code treated every exit 5 as
+# success, so this reported green with a stub sitting in tests/ that nothing
+# ever ran. It must fail now.
+@test "spatial_seed_make_test_fails_when_tests_dir_has_a_file_but_collects_nothing" {
+  if ! command -v uv >/dev/null 2>&1; then skip "uv not installed"; fi
+  setup_make_test_fixture
+  mkdir -p "$MTFIXTURE/tests"
+  printf 'def helper():\n    return 1\n' > "$MTFIXTURE/tests/util.py"
+  run make -C "$MTFIXTURE" test
+  rm -rf "$MTFIXTURE"
+  [ "$status" -ne 0 ]
 }
 
 # `all` documents itself as "rebuild every derived artifact", so it must depend
@@ -557,8 +639,13 @@ SEED="$PROFILE/seed"
   [ "$status" -eq 0 ]
 }
 
+# The copy alone leaves the six directories missing — they are created
+# separately because git cannot track empty directories — so the documented
+# manual path must carry both commands, not just the copy.
 @test "spatial_readme_documents_the_manual_seed_path" {
-  run grep -F 'cp -rn ~/.config/workspaces/profiles/spatial/seed/. .' "$PROFILE/README.md"
+  run grep -F 'cp -r --update=none ~/.config/workspaces/profiles/spatial/seed/. .' "$PROFILE/README.md"
+  [ "$status" -eq 0 ]
+  run grep -F 'mkdir -p model source scripts tests out docs' "$PROFILE/README.md"
   [ "$status" -eq 0 ]
 }
 

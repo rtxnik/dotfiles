@@ -14,6 +14,11 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 #
 # poppler-utils and imagemagick are the raster back-office: page extraction if
 # the finishing schedules arrive as PDF, and batch preparation of scans.
+#
+# The mise install here mirrors every other profile in the fleet and is a
+# convenience only: the mise the container actually uses is installed for the
+# `vscode` user by chezmoi (.chezmoiexternals -> ~/.local/bin/mise) during
+# post-create, before anything needs it.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        ca-certificates curl git iproute2 unzip build-essential \

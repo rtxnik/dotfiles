@@ -27,9 +27,12 @@ capacity: scripts/capacity.py  ## capacity matrix
 	$(PY) $<
 
 test:  ## model invariants
-	uv run pytest -q; rc=$$?; \
-	if [ $$rc -eq 5 ]; then echo "no model invariants written yet (pytest exit 5: no tests collected)"; \
-	elif [ $$rc -ne 0 ]; then exit $$rc; fi
+	@uv run pytest -q; rc=$$?; \
+	if [ $$rc -eq 5 ] && [ -z "$$(find tests -name '*.py' -print -quit 2>/dev/null)" ]; then \
+		echo "no model invariants written yet"; \
+	else \
+		exit $$rc; \
+	fi
 
 doctor:  ## environment self-check, provided by the spatial profile
 	@test -f $(DOCTOR) || { echo "profile self-check not found at $(DOCTOR)"; exit 1; }

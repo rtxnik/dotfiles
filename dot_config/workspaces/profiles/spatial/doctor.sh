@@ -119,9 +119,16 @@ fi
 # --- documents ----------------------------------------------------------------
 # A real conversion, not a version comparison: noble's pandoc parses
 # --pdf-engine=typst and then fails, which a version check would not catch.
+# A non-empty PDF only proves pandoc ran — the failure this row exists to catch
+# is silent Cyrillic loss, which produces a perfectly non-empty PDF. So the
+# round trip continues through pdftotext and requires the Cyrillic word to
+# actually be recoverable from the output.
 tmp="$(mktemp -d -t spatial-pandoc-XXXXXXXX)"
 printf '# Проверка\n\nТекст.\n' > "$tmp/in.md"
-if pandoc --pdf-engine=typst "$tmp/in.md" -o "$tmp/out.pdf" 2>"$tmp/err" && [ -s "$tmp/out.pdf" ]; then
+if pandoc --pdf-engine=typst "$tmp/in.md" -o "$tmp/out.pdf" 2>"$tmp/err" &&
+   [ -s "$tmp/out.pdf" ] &&
+   pdftotext "$tmp/out.pdf" "$tmp/out.txt" 2>/dev/null &&
+   grep -q 'Проверка' "$tmp/out.txt"; then
     ok pandoc+typst "$(pandoc --version 2>/dev/null | head -n 1)"
 else
     bad pandoc+typst "$(tail -n 1 "$tmp/err" 2>/dev/null || echo 'pandoc not on PATH')"

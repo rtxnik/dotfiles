@@ -57,8 +57,12 @@ A folder that already holds a project is never touched. To apply the skeleton by
 hand afterwards:
 
 ```bash
-cp -rn ~/.config/workspaces/profiles/spatial/seed/. .
+cp -r --update=none ~/.config/workspaces/profiles/spatial/seed/. .
+mkdir -p model source scripts tests out docs
 ```
+
+The copy alone is not the whole skeleton: the six directories above are created
+separately by the bootstrap because git cannot track empty directories.
 
 Analytic scripts and model invariants are **not** seeded. They belong to a model
 that does not exist yet, and a test file that passes because it has nothing to

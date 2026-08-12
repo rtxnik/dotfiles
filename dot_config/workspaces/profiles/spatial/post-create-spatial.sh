@@ -45,14 +45,26 @@ seed_project() {
     fi
     if [ -e "$PROJECT_ROOT/pyproject.toml" ] || [ -e "$PROJECT_ROOT/.git" ]; then
         log "$PROJECT_ROOT already holds a project — seed skipped"
-        log "to apply the skeleton by hand: cp -rn $SEED_DIR/. $PROJECT_ROOT/"
+        log "to apply the skeleton by hand: cp -r --update=none $SEED_DIR/. $PROJECT_ROOT/ && mkdir -p $PROJECT_ROOT/model $PROJECT_ROOT/source $PROJECT_ROOT/scripts $PROJECT_ROOT/tests $PROJECT_ROOT/out $PROJECT_ROOT/docs"
         return 1
     fi
     log "seeding the project skeleton into $PROJECT_ROOT"
     # `src/.` rather than `src/*`: the glob would leave .gitignore behind.
-    if ! cp -rn "$SEED_DIR/." "$PROJECT_ROOT/"; then
-        log "WARNING: the seed copy failed part-way"
-        log "complete it by hand: cp -rn $SEED_DIR/. $PROJECT_ROOT/"
+    # `--update=none` (coreutils 9.3+) is the non-deprecated spelling of the old
+    # `-n`: same "never overwrite" behaviour, without the "-n is non-portable"
+    # warning `-n` prints to stderr — and into the container-create log — on
+    # every seeded boot. The copy's own exit status is not gated on: the
+    # completeness check right below already renders the verdict.
+    cp -r --update=none "$SEED_DIR/." "$PROJECT_ROOT/" ||
+        log "WARNING: the seed copy reported an error — the completeness check below decides what actually landed"
+    # Git cannot track empty directories, so the skeleton is created here rather
+    # than carried as .gitkeep files that would land in the project as clutter.
+    # Unconditional and ahead of the completeness check below: mkdir -p is
+    # idempotent, and a folder that fails that check still benefits from having
+    # its layout.
+    if ! mkdir -p "$PROJECT_ROOT/model" "$PROJECT_ROOT/source" "$PROJECT_ROOT/scripts" \
+                  "$PROJECT_ROOT/tests" "$PROJECT_ROOT/out" "$PROJECT_ROOT/docs"; then
+        log "WARNING: could not create the directory skeleton in $PROJECT_ROOT"
         return 1
     fi
     # A copy that died after placing pyproject.toml would make every later boot
@@ -63,14 +75,7 @@ seed_project() {
     done
     if [ -n "$missing" ]; then
         log "WARNING: the seed is incomplete, missing:$missing"
-        log "complete it by hand: cp -rn $SEED_DIR/. $PROJECT_ROOT/"
-        return 1
-    fi
-    # Git cannot track empty directories, so the skeleton is created here rather
-    # than carried as .gitkeep files that would land in the project as clutter.
-    if ! mkdir -p "$PROJECT_ROOT/model" "$PROJECT_ROOT/source" "$PROJECT_ROOT/scripts" \
-                  "$PROJECT_ROOT/tests" "$PROJECT_ROOT/out" "$PROJECT_ROOT/docs"; then
-        log "WARNING: could not create the directory skeleton in $PROJECT_ROOT"
+        log "complete it by hand: cp -r --update=none $SEED_DIR/. $PROJECT_ROOT/"
         return 1
     fi
     return 0
