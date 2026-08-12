@@ -1,0 +1,20 @@
+{
+	"name": "Spatial",
+	"build": { "dockerfile": "Dockerfile" },
+	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {
+			"installZsh": true,
+			"configureZshAsDefaultShell": true,
+			"installOhMyZsh": false
+		},
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
+	"mounts": [],
+	"containerEnv": {
+		"WORKSPACE_PROFILE": "spatial"
+	},
+	"postCreateCommand": "bash .devcontainer/post-create.sh",
+	"forwardPorts": [8000, 5173],
+	"remoteUser": "vscode"
+}

@@ -1,0 +1,27 @@
+[settings.node]
+gpg_verify = false
+
+[tools]
+# Pinned, not floating: the whole wheel set (opencv, pandas, numpy, cairosvg,
+# Pillow, openpyxl) was resolved and imported on 3.12/linux-arm64. OpenCV in
+# particular lags a new interpreter, and "no wheel" means "build from source"
+# means a container that fails on first sync.
+python = "3.12"
+uv = "latest"
+ruff = "latest"
+
+# pandoc from mise, not apt: noble ships 3.1.3 and --pdf-engine=typst landed in
+# 3.1.11, so the apt package silently removes the only PDF path that does not
+# drag in a LaTeX distribution. typst is that engine, and is usable on its own.
+pandoc = "latest"
+typst = "latest"
+
+# Node builds the parametric interactive into a single HTML file.
+node = "lts"
+pnpm = "latest"
+
+jq = "latest"
+yq = "latest"
+fzf = "latest"
+ripgrep = "latest"
+fd = "latest"
