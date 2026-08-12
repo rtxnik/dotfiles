@@ -284,3 +284,146 @@ teardown() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"could not create the directory skeleton"* ]]
 }
+
+DOCTOR="$PROFILE/doctor.sh"
+
+@test "spatial_doctor_is_executable_and_shellcheck_clean" {
+  test -x "$DOCTOR"
+  if command -v shellcheck >/dev/null 2>&1; then
+    run shellcheck --severity=warning "$DOCTOR"
+    [ "$status" -eq 0 ]
+  fi
+}
+
+# Two ways this probe can lie, so two controls.
+@test "spatial_doctor_cyrillic_check_carries_both_controls" {
+  # A cairosvg PNG has a transparent background, so "are there non-white pixels"
+  # passes on a completely empty render.
+  run grep -E 'blank[[:space:]]*!=[[:space:]]*0' "$DOCTOR"
+  [ "$status" -eq 0 ]
+  # Digits render from any font, so a probe string carrying digits scores ink
+  # with every Cyrillic glyph dropped. The Latin control is what makes the
+  # comparison mean something.
+  run grep -E 'cyrillic[[:space:]]*<[[:space:]]*latin' "$DOCTOR"
+  [ "$status" -eq 0 ]
+  # Missing glyphs are not blank: fontconfig/cairo draw .notdef boxes that carry
+  # real ink. The reference comparison is what tells a real Cyrillic render
+  # apart from a container with no Cyrillic font at all.
+  run grep -F 'cyrillic_png == ref_a' "$DOCTOR"
+  [ "$status" -eq 0 ]
+}
+
+@test "spatial_doctor_probe_strings_carry_no_digits" {
+  [ -f "$DOCTOR" ]
+  run grep -E 'ink\("[^"]*[0-9]' "$DOCTOR"
+  [ "$status" -ne 0 ]
+}
+
+# The greps above pin the shape; this runs the real thing. Skipped where uv is
+# absent (the CI runner), which is why Task 6 also runs it author-side.
+@test "spatial_doctor_probe_renders_cyrillic_in_this_environment" {
+  if ! command -v uv >/dev/null 2>&1; then skip "uv not installed"; fi
+  if [ ! -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]; then skip "DejaVu absent"; fi
+  PROBE="$(mktemp -t spatial-probe-XXXXXXXX.py)"
+  sed -n "/^cat > \"\$probe\" <<'PY'\$/,/^PY\$/p" "$DOCTOR" | sed '1d;$d' > "$PROBE"
+  # An empty extraction would make the run below vacuous.
+  [ -s "$PROBE" ]
+  run env SPATIAL_FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+      uv run --no-project --python 3.12 --python-preference only-system \
+      --with pandas --with numpy --with opencv-python-headless \
+      --with pillow --with cairosvg --with openpyxl python "$PROBE"
+  rm -f "$PROBE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"cairosvg blank=0"* ]]
+}
+
+# The detector, exercised in the direction that matters. Missing glyphs render as
+# .notdef boxes carrying real ink, so an ink-threshold check passes on a
+# container with no Cyrillic font at all; only the comparison against a
+# same-length glyphless reference catches it.
+@test "spatial_doctor_probe_rejects_text_that_renders_as_notdef_boxes" {
+  if ! command -v uv >/dev/null 2>&1; then skip "uv not installed"; fi
+  if [ ! -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]; then skip "DejaVu absent"; fi
+  PROBE="$(mktemp -t spatial-probe-XXXXXXXX.py)"
+  sed -n "/^cat > \"\$probe\" <<'PY'\$/,/^PY\$/p" "$DOCTOR" | sed '1d;$d' > "$PROBE"
+  [ -s "$PROBE" ]
+  run env SPATIAL_CYRILLIC_PROBE=$'⿪⿫⿬⿭⿮' \
+      SPATIAL_FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+      uv run --no-project --python 3.12 --python-preference only-system \
+      --with pandas --with numpy --with opencv-python-headless \
+      --with pillow --with cairosvg --with openpyxl python "$PROBE"
+  rm -f "$PROBE"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"notdef boxes"* ]]
+}
+
+# Version arithmetic says what should work; a conversion says what does.
+@test "spatial_doctor_converts_a_document_rather_than_reading_a_version" {
+  run grep -F -- '--pdf-engine=typst' "$DOCTOR"
+  [ "$status" -eq 0 ]
+  run grep -F -- '-s "$tmp/out.pdf"' "$DOCTOR"
+  [ "$status" -eq 0 ]
+}
+
+# The package probe must not depend on the folder the container happens to be
+# sitting in: the profile is what is under test, not somebody's project.
+@test "spatial_doctor_probes_packages_outside_any_project" {
+  run grep -F -- '--no-project' "$DOCTOR"
+  [ "$status" -eq 0 ]
+}
+
+@test "spatial_doctor_fails_when_the_toolchain_is_absent" {
+  # A stripped PATH has no uv, no pandoc, no node: every probe must fail and the
+  # exit code must carry that. This is the assertion that a doctor which always
+  # exits 0 cannot survive.
+  #
+  # HOME points at an empty directory on purpose. doctor.sh prepends
+  # $HOME/.local/bin and activates mise when it finds it, and mise's shims would
+  # put the real toolchain back on PATH — the test would then measure the
+  # machine it runs on instead of the failure path.
+  FAKEHOME="$(mktemp -d -t spatial-home-XXXXXXXX)"
+  run env -i PATH=/usr/bin:/bin HOME="$FAKEHOME" bash "$DOCTOR"
+  rm -rf "$FAKEHOME"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"FAIL"* ]]
+}
+
+@test "spatial_doctor_passes_when_every_probe_succeeds" {
+  # Stubs prove the accounting, not the environment: a doctor that always exits
+  # non-zero fails here, and a doctor that ignores a probe's status fails the
+  # test above. The real environment is proven on first boot in the container.
+  STUBS="$(mktemp -d -t spatial-stubs-XXXXXXXX)"
+  FAKEHOME="$(mktemp -d -t spatial-home-XXXXXXXX)"
+  FONTFIX="$FAKEHOME/DejaVuSans.ttf"
+  : > "$FONTFIX"
+  cat > "$STUBS/python" <<'EOF'
+#!/bin/sh
+echo "Python 3.12.11"
+EOF
+  cat > "$STUBS/uv" <<'EOF'
+#!/bin/sh
+echo "versions cv2=5.0.0 pandas=3.0.5 numpy=2.5.2"
+echo "cairosvg blank=0 cyrillic=662"
+echo "pillow dejavu bbox=(0, 4, 59, 19)"
+EOF
+  cat > "$STUBS/pandoc" <<'EOF'
+#!/bin/sh
+for a in "$@"; do
+  case "$a" in --version) echo "pandoc 3.9.1"; exit 0 ;; esac
+done
+out=""; prev=""
+for a in "$@"; do
+  [ "$prev" = "-o" ] && out="$a"
+  prev="$a"
+done
+[ -n "$out" ] && echo "%PDF-1.7 stub" > "$out"
+EOF
+  for t in node pnpm pdftoppm convert; do
+    printf '#!/bin/sh\necho "%s stub 1.0"\n' "$t" > "$STUBS/$t"
+  done
+  chmod +x "$STUBS"/*
+  run env -i PATH="$STUBS:/usr/bin:/bin" HOME="$FAKEHOME" SPATIAL_FONT="$FONTFIX" bash "$DOCTOR"
+  rm -rf "$STUBS" "$FAKEHOME"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+}
