@@ -427,3 +427,103 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" != *"FAIL"* ]]
 }
+
+SEED="$PROFILE/seed"
+
+# chezmoi applies attribute prefixes to every file in the source tree, so a
+# literal `.gitignore` here would reach $HOME as `.gitignore` only by accident
+# of it being hidden — the source-state name must carry the prefix.
+@test "spatial_seed_gitignore_uses_the_chezmoi_prefix" {
+  test -f "$SEED/dot_gitignore"
+  [ ! -f "$SEED/.gitignore" ]
+}
+
+@test "spatial_seed_pins_the_verified_python_floor" {
+  run grep -F 'requires-python = ">=3.12,<3.13"' "$SEED/pyproject.toml"
+  [ "$status" -eq 0 ]
+}
+
+@test "spatial_seed_declares_the_pipeline_dependencies" {
+  for pkg in pandas numpy opencv-python-headless pillow cairosvg openpyxl pytest; do
+    run grep -F "\"$pkg" "$SEED/pyproject.toml"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# The container has no display and the headless wheel drops the whole GL
+# dependency chain; the full wheel is available by hand, which is why the image
+# still carries libgl1.
+@test "spatial_seed_does_not_request_the_gui_opencv_wheel" {
+  [ -f "$SEED/pyproject.toml" ]
+  run grep -E '"opencv-python[^-]' "$SEED/pyproject.toml"
+  [ "$status" -ne 0 ]
+}
+
+@test "spatial_seed_resolves_with_uv" {
+  if ! command -v uv >/dev/null 2>&1; then skip "uv not installed"; fi
+  WORK="$(mktemp -d -t spatial-lock-XXXXXXXX)"
+  cp "$SEED/pyproject.toml" "$WORK/"
+  run bash -c "cd '$WORK' && uv lock"
+  rm -rf "$WORK"
+  [ "$status" -eq 0 ]
+}
+
+@test "spatial_seed_makefile_exposes_the_pipeline_targets" {
+  for target in help sync csv svg xlsx capacity test doctor all clean; do
+    run grep -E "^${target}:" "$SEED/Makefile"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# `all` documents itself as "rebuild every derived artifact", so it must depend
+# on every artifact target — a partial `all` is a rebuild that quietly leaves one
+# derived file stale, which is the exact failure this project's rules forbid.
+@test "spatial_seed_makefile_all_covers_every_artifact_target" {
+  line="$(grep -E '^all:' "$SEED/Makefile")"
+  [ -n "$line" ]
+  for target in csv svg xlsx capacity; do
+    [[ "$line" == *" $target"* ]] || { echo "all: does not depend on $target"; return 1; }
+  done
+}
+
+# A target whose script has not been written yet must say so by name rather than
+# silently produce nothing.
+@test "spatial_seed_makefile_names_a_missing_script" {
+  WORK="$(mktemp -d -t spatial-make-XXXXXXXX)"
+  cp "$SEED/Makefile" "$WORK/"
+  run make -C "$WORK" -n csv
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"scripts/export_csv.py"* ]]
+  rm -rf "$WORK"
+}
+
+@test "spatial_seed_makefile_runs_a_present_script" {
+  WORK="$(mktemp -d -t spatial-make-XXXXXXXX)"
+  cp "$SEED/Makefile" "$WORK/"
+  mkdir -p "$WORK/scripts"
+  echo "print('ok')" > "$WORK/scripts/export_csv.py"
+  run make -C "$WORK" -n csv
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"scripts/export_csv.py"* ]]
+  rm -rf "$WORK"
+}
+
+@test "spatial_seed_claude_md_states_the_load_bearing_rules" {
+  for phrase in "geometry.json" "39 dpi" "y_svg = -Y_mm" "cv2.putText" "model_core.json"; do
+    run grep -F "$phrase" "$SEED/CLAUDE.md"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# The rules file documents `make all`. If its comment and the Makefile's own
+# dependency list disagree, a reader trusting the rules file expects the wrong
+# set of artifacts to be rebuilt — which is how this drifted in the first place.
+@test "spatial_seed_claude_md_rebuild_line_matches_make_all" {
+  deps="$(grep -E '^all:' "$SEED/Makefile" | sed 's/^all:[[:space:]]*//; s/#.*//')"
+  [ -n "$deps" ]
+  line="$(grep -F 'make all' "$SEED/CLAUDE.md")"
+  [ -n "$line" ]
+  for d in $deps; do
+    [[ "$line" == *"$d"* ]] || { echo "make all depends on $d, not named in CLAUDE.md: $line"; return 1; }
+  done
+}
