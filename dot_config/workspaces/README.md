@@ -24,6 +24,7 @@ ws delete myproject           # delete
 | `k8s` | kubectl, helm, k9s, kind, stern, flux, argocd |
 | `python` | python, uv, ruff, jq, yq, fzf, ripgrep, fd |
 | `rust` | rust, cargo-binstall, jq, yq, fzf, ripgrep, fd |
+| `spatial` | python 3.12 (pinned), uv, ruff, pandoc, typst, node (lts), pnpm, jq, yq, fzf, ripgrep, fd + cairo/OpenCV system libraries and Cyrillic fonts |
 | `web` | node (lts), bun, deno, pnpm |
 | `meta` | go, golangci-lint, goreleaser, node (lts), pnpm, neovim, bats, shellcheck, shfmt, tmux, git-lfs |
 

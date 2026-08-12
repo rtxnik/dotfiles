@@ -1,0 +1,21 @@
+[project]
+name = "spatial-study"
+version = "0.1.0"
+description = "Conceptual conversion study — numeric building model and every artifact derived from it"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "opencv-python-headless>=4.10",
+    "pillow>=10.4",
+    "cairosvg>=2.7",
+    "openpyxl>=3.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+]
+
+[tool.ruff]
+line-length = 100
