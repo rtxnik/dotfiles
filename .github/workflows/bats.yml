@@ -18,7 +18,7 @@ jobs:
       # SHA-pin mirrors validate.yml per ADR-int-04 (tag-pin alone forbidden).
       # actions/checkout v4.2.2 -> 11bd71901bbe5b1630ceea73d27597364c9af683
       # (verified 2026-05-03).
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 (resolved 2026-05-03)
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v4.2.2 (resolved 2026-05-03)
         with:
           persist-credentials: false
 
