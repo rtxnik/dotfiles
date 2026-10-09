@@ -28,6 +28,9 @@ ws delete myproject           # delete
 | `web` | node (lts), bun, deno, pnpm |
 | `meta` | go, golangci-lint, goreleaser, node (lts), pnpm, neovim, bats, shellcheck, shfmt, tmux, git-lfs |
 
+Cloud sessions on claude.ai/code are not DevPod containers; their counterpart
+of a profile is the bootstrap in [`cloud/`](cloud/README.md).
+
 ## Auto-detect
 
 When creating a workspace without specifying a profile, `ws new` scans
