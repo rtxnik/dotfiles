@@ -61,22 +61,30 @@ fi
 [ -n "${CLOUD_DOCTOR_OFFLINE:-}" ] && exit "$rc"
 
 echo "api tokens"
-if [ -n "${VERCEL_TOKEN:-}" ]; then
-  if vercel whoami >/dev/null 2>&1; then ok "vercel: $(vercel whoami 2>/dev/null | tail -1)"; else miss "vercel: VERCEL_TOKEN set but rejected"; fi
-else
-  miss "vercel: VERCEL_TOKEN not set"
-fi
-# api_check <name> <url> <header prefix> <variable>: with a network secret the proxy
-# attaches the key itself, so the header is sent only when the variable holds a
-# real key rather than the placeholder.
+# With a network secret the proxy attaches the key itself and the variable holds
+# a placeholder; the header is sent only for a real key.
+placeholder() { [ "$1" = network-secret ] || [ "$1" = networksecret ]; }
+# api_check <name> <url> <header prefix> <variable>
 api_check() {
   local name=$1 url=$2 header=$3 value=${!4:-} code
   local auth=()
-  if [ -n "$value" ] && [ "$value" != network-secret ]; then auth=(-H "$header $value"); fi
+  if [ -n "$value" ] && ! placeholder "$value"; then auth=(-H "$header $value"); fi
   code="$(curl -s -o /dev/null -w '%{http_code}' "${auth[@]}" "$url" 2>/dev/null)"
   if [ "$code" = 200 ]; then ok "$name: API answers 200"; else miss "$name: API answers ${code:-nothing} (key missing or rejected)"; fi
 }
+api_check vercel https://api.vercel.com/v2/user "Authorization: Bearer" VERCEL_TOKEN
 api_check timeweb https://api.timeweb.cloud/api/v1/apps "Authorization: Bearer" TIMEWEB_TOKEN
 api_check elevenlabs https://api.elevenlabs.io/v1/user "xi-api-key:" ELEVENLABS_API_KEY
+# The Vercel CLI refuses a token holding anything but letters, digits and _
+# before it asks the API, so its placeholder is networksecret, not network-secret.
+if [ -z "${VERCEL_TOKEN:-}" ]; then
+  miss "vercel cli: VERCEL_TOKEN not set (with a network secret: VERCEL_TOKEN=networksecret)"
+elif [[ $VERCEL_TOKEN =~ [^A-Za-z0-9_] ]]; then
+  miss "vercel cli: VERCEL_TOKEN holds a character the CLI refuses (with a network secret: VERCEL_TOKEN=networksecret)"
+elif who="$(vercel whoami 2>/dev/null)"; then
+  ok "vercel cli: $(tail -1 <<<"$who")"
+else
+  miss "vercel cli: VERCEL_TOKEN rejected"
+fi
 
 exit "$rc"

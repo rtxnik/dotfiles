@@ -74,6 +74,42 @@ CLOUD="$REPO_ROOT/dot_config/workspaces/cloud"
   [[ "$output" == *"ok    AUTHOR rtxnik <rtxs.nik@gmail.com>"* ]]
 }
 
+# The Vercel CLI refuses a token holding anything but [A-Za-z0-9_] before it
+# asks the API: with `network-secret` the doctor reported a working key as
+# rejected. It now checks the API and the CLI apart, and names the fix.
+doctor_with_stubs() {
+  cd "$BATS_TEST_TMPDIR"
+  git init -q .
+  mkdir -p stub
+  printf '#!/bin/bash\necho "$*" >> "%s/curl.args"\nprintf 200\n' "$BATS_TEST_TMPDIR" > stub/curl
+  printf '#!/bin/bash\n[ "$1" = whoami ] && echo rtxnik\n' > stub/vercel
+  chmod +x stub/curl stub/vercel
+  PATH="$BATS_TEST_TMPDIR/stub:$PATH" HOME="$BATS_TEST_TMPDIR" VERCEL_TOKEN="$1" \
+    GIT_AUTHOR_NAME=rtxnik GIT_AUTHOR_EMAIL=rtxs.nik@gmail.com \
+    GIT_COMMITTER_NAME=rtxnik GIT_COMMITTER_EMAIL=rtxs.nik@gmail.com \
+    run bash "$CLOUD/doctor.sh"
+}
+
+@test "cloud_doctor_names_the_vercel_placeholder_the_cli_refuses" {
+  doctor_with_stubs network-secret
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ok    vercel: API answers 200"* ]]
+  [[ "$output" == *"MISS  vercel cli: VERCEL_TOKEN holds a character the CLI refuses"* ]]
+  run grep -c 'Authorization' "$BATS_TEST_TMPDIR/curl.args"
+  [ "$output" = 0 ]
+}
+
+@test "cloud_doctor_passes_the_vercel_placeholder_the_cli_takes" {
+  doctor_with_stubs networksecret
+  [[ "$output" == *"ok    vercel: API answers 200"* ]]
+  [[ "$output" == *"ok    vercel cli: rtxnik"* ]]
+}
+
+@test "cloud_readme_gives_vercel_a_placeholder_the_cli_takes" {
+  placeholder="$(grep -o 'VERCEL_TOKEN=[^`]*' "$CLOUD/README.md")"
+  [[ "${placeholder#VERCEL_TOKEN=}" =~ ^[A-Za-z0-9_]+$ ]]
+}
+
 # The presentations' voiceovers are ElevenLabs takes cut and levelled with
 # ffmpeg; a session without either finds out only when the owner asks for a take.
 @test "cloud_voiceover_tools_are_installed_and_checked" {
