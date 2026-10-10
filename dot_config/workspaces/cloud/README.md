@@ -19,14 +19,16 @@ In claude.ai/code open the environment menu in a session's title bar → Edit:
 
    | Name | Allowed websites | Header | Prefix | Placeholder variable |
    |------|------------------|--------|--------|----------------------|
-   | Vercel | `api.vercel.com` | `Authorization` | `Bearer` | `VERCEL_TOKEN=network-secret` |
+   | Vercel | `api.vercel.com` | `Authorization` | `Bearer` | `VERCEL_TOKEN=networksecret` |
    | Timeweb | `api.timeweb.cloud` | `Authorization` | `Bearer` | — |
    | ElevenLabs | `api.elevenlabs.io` | `xi-api-key` | none | `ELEVENLABS_API_KEY=network-secret` |
 
    A CLI or SDK that refuses to start without its variable (the Vercel CLI,
    the ElevenLabs SDKs and MCP server) gets the placeholder in **Environment
    variables**; a plain `curl` needs no variable at all. On plans without
-   network secrets the variables hold the real keys.
+   network secrets the variables hold the real keys. The Vercel CLI refuses
+   a token with anything but letters, digits and `_` before it asks the API,
+   hence `networksecret` there.
 
 Connectors (Notion, Linear, Slack, Google Drive, …) and plugins turned on in
 the claude.ai account reach every cloud session by themselves; they are
