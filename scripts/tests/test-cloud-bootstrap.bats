@@ -73,3 +73,11 @@ CLOUD="$REPO_ROOT/dot_config/workspaces/cloud"
   [ "$status" -eq 0 ]
   [[ "$output" == *"ok    AUTHOR rtxnik <rtxs.nik@gmail.com>"* ]]
 }
+
+# The presentations' voiceovers are ElevenLabs takes cut and levelled with
+# ffmpeg; a session without either finds out only when the owner asks for a take.
+@test "cloud_voiceover_tools_are_installed_and_checked" {
+  grep -q 'apt-get install .* ffmpeg' "$CLOUD/setup.sh"
+  grep -q 'api_check elevenlabs https://api.elevenlabs.io/' "$CLOUD/doctor.sh"
+  grep -q '`api.elevenlabs.io` | `xi-api-key` | none' "$CLOUD/README.md"
+}

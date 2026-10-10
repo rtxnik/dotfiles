@@ -56,8 +56,10 @@ bg() { local label=$1; shift; { step "$label" "$@" || touch "$status_dir/$label"
 
 bg "node tools (corepack, vercel)" \
   npm install -g --no-fund --no-audit "corepack@${COREPACK_VERSION}" "vercel@${VERCEL_VERSION}"
-bg "apt (shellcheck, bats)" \
-  sh -c 'apt-get update -qq && apt-get install -y -qq --no-install-recommends shellcheck bats'
+# ffmpeg cuts, fades and levels the presentations' voiceovers (ElevenLabs takes);
+# the image carries it today, this keeps it when the image changes.
+bg "apt (shellcheck, bats, ffmpeg)" \
+  sh -c 'apt-get update -qq && apt-get install -y -qq --no-install-recommends shellcheck bats ffmpeg'
 bg "gitleaks ${GITLEAKS_VERSION}" \
   env GOBIN="$bin_dir" go install \
     -ldflags "-X=github.com/zricethezav/gitleaks/v8/version.Version=${GITLEAKS_VERSION}" \

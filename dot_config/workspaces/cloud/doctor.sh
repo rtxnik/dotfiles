@@ -27,7 +27,7 @@ for who in AUTHOR COMMITTER; do
 done
 
 echo "toolchain"
-for tool in node pnpm vercel jq yq uv gh shellcheck bats gitleaks graphify serena; do
+for tool in node pnpm vercel jq yq uv gh shellcheck bats gitleaks graphify serena ffmpeg ffprobe; do
   if command -v "$tool" >/dev/null 2>&1; then
     ok "$tool $("$tool" --version 2>/dev/null | head -1)"
   else
@@ -66,10 +66,17 @@ if [ -n "${VERCEL_TOKEN:-}" ]; then
 else
   miss "vercel: VERCEL_TOKEN not set"
 fi
-# With a network secret the proxy attaches the key itself and no variable is set.
-auth=()
-[ -n "${TIMEWEB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $TIMEWEB_TOKEN")
-code="$(curl -s -o /dev/null -w '%{http_code}' "${auth[@]}" https://api.timeweb.cloud/api/v1/apps 2>/dev/null)"
-if [ "$code" = 200 ]; then ok "timeweb: API answers 200"; else miss "timeweb: API answers ${code:-nothing} (token missing or rejected)"; fi
+# api_check <name> <url> <header prefix> <variable>: with a network secret the proxy
+# attaches the key itself, so the header is sent only when the variable holds a
+# real key rather than the placeholder.
+api_check() {
+  local name=$1 url=$2 header=$3 value=${!4:-} code
+  local auth=()
+  if [ -n "$value" ] && [ "$value" != network-secret ]; then auth=(-H "$header $value"); fi
+  code="$(curl -s -o /dev/null -w '%{http_code}' "${auth[@]}" "$url" 2>/dev/null)"
+  if [ "$code" = 200 ]; then ok "$name: API answers 200"; else miss "$name: API answers ${code:-nothing} (key missing or rejected)"; fi
+}
+api_check timeweb https://api.timeweb.cloud/api/v1/apps "Authorization: Bearer" TIMEWEB_TOKEN
+api_check elevenlabs https://api.elevenlabs.io/v1/user "xi-api-key:" ELEVENLABS_API_KEY
 
 exit "$rc"
