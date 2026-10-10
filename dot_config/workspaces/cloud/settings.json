@@ -1,0 +1,19 @@
+{
+  "env": {
+    "GIT_AUTHOR_NAME": "rtxnik",
+    "GIT_AUTHOR_EMAIL": "rtxs.nik@gmail.com",
+    "GIT_COMMITTER_NAME": "rtxnik",
+    "GIT_COMMITTER_EMAIL": "rtxs.nik@gmail.com",
+    "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
+    "VERCEL_TELEMETRY_DISABLED": "1"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true
+  }
+}
